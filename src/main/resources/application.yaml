@@ -4,6 +4,7 @@ server:
 app:
   name: quastio
   version: 0.0.1
+  thread-count: 2
 
 spring:
   datasource:
@@ -12,18 +13,44 @@ spring:
     url: jdbc:mysql://localhost:3306/search_engine?useSSL-false&requireSSL=false&allowPublicKeyRetrieval=true
     #driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
-    #properties:
-      #hibernate:
-        #dialect: org.hibernate.dialect.MySQLDialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: update
     show-sql: true
 
+jsoup-settings:
+  user-agent: QuastioSearchBot
+  referrer: http://www.google.com
+
 indexing-settings:
   sites:
-    - url: https://www.lenta.ru
-      name: Лента.ру
-    - url: https://www.skillbox.ru
-      name: Skillbox
-    - url: https://www.playback.ru
-      name: PlayBack.Ru
+    #- url: https://www.lenta.ru/
+    #  name: Лента.ру
+    #- url: https://www.skillbox.ru/
+    #  name: Skillbox
+    #- url: https://www.playback.ru/
+    #  name: PlayBack.Ru
+    #- url: https://volochek.life/
+    #  name: Volochek
+    #- url: http://radiomv.ru/
+    #  name: Radiomv
+    #- url: https://ipfran.ru/
+    #  name: Ipfran
+    #- url: https://dimonvideo.ru/
+    #  name: Dimonvideo
+    - url: https://nikoartgallery.com/
+      name: Nikoartgallery
+    #- url: https://et-cetera.ru/mobile/
+    #  name: Et-cetera
+    #- url: https://www.lutherancathedral.ru/
+    #  name: Lutherancathedral
+    #- url: https://dombulgakova.ru/
+    #  name: Dombulgakova
+    #- url: https://www.svetlovka.ru/
+    #  name: Svetlovka
+    - url: https://sendel.ru/
+      name: Sendel
+    - url: https://fakeandnotexist.ru
+      name: fakeandnotexist
