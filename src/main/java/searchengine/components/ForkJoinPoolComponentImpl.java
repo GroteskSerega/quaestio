@@ -26,6 +26,10 @@ public class ForkJoinPoolComponentImpl implements ForkJoinPoolComponent {
 
     private final SitesComponent sitesComponent;
     private final PagesComponent pagesComponent;
+    private final LemmasComponent lemmasComponent;
+    private final IndexesComponent indexesComponent;
+
+    private final LuceneMorphologyComponent luceneMorphologyComponent;
 
     private final AppConfig appConfig;
     private final JsoupConfig jsoupConfig;
@@ -38,10 +42,12 @@ public class ForkJoinPoolComponentImpl implements ForkJoinPoolComponent {
         TaskManagerEngine taskManager = prepareTasksManager(site);
         ForkJoinPool forkJoinPool = startProcessIndexing(taskManager);
         scanningStatusOfIndexing(forkJoinPool, taskManager);
+        // TODO SOMETIMES saveResultsOfIndexing START EARLY SCANNING STATUS OF RESULT
         saveResultsOfIndexing(taskManager);
         log.info(TEMPLATE_CONFIG_FORK_JOIN_POOL_SHUTDOWN,
                 forkJoinPool);
-        forkJoinPool.shutdown();
+//        forkJoinPool.shutdown();
+        log.info(TEMPLATE_ENGINE_FINISHED_PROCESSING_SITE, site);
     }
 
     private TaskManagerEngine prepareTasksManager(Site site) {
@@ -50,6 +56,9 @@ public class ForkJoinPoolComponentImpl implements ForkJoinPoolComponent {
                 site,
                 sitesComponent,
                 pagesComponent,
+                lemmasComponent,
+                indexesComponent,
+                luceneMorphologyComponent,
                 jsoupConfig);
     }
 
@@ -74,6 +83,11 @@ public class ForkJoinPoolComponentImpl implements ForkJoinPoolComponent {
             }
             log.info(TEMPLATE_COMPONENT_FORK_JOIN_POOL_GET_STATISTIC,
                     taskManager.getSite().getName(),
+                    taskManager.isDone(),
+                    taskManager.isCancelled(),
+                    taskManager.isCompletedAbnormally(),
+                    taskManager.isCompletedNormally(),
+                    TaskManagerEngine.isCancel(),
                     forkJoinPool.getParallelism(),
                     forkJoinPool.getActiveThreadCount(),
                     forkJoinPool.getQueuedTaskCount(),
@@ -85,17 +99,8 @@ public class ForkJoinPoolComponentImpl implements ForkJoinPoolComponent {
     }
 
     private void saveResultsOfIndexing(TaskManagerEngine taskManager) {
-        //CODE FOR DEBUGGING
-//        Set<String> rawLinks = new HashSet<>();
-//        rawLinks.addAll(taskManager.join());
-
-//        log.info("result: {}", Arrays.toString(rawLinks.toArray()));
-//        log.info("result count for site {}: {}",
-//                taskManager.getSite().getName(),
-//                rawLinks.size());
-
         Site site = taskManager.getSite();
-        Page anyPage = pagesComponent.findFirstPageBySiteId(site.getId());
+        Page anyPage = pagesComponent.findFirstPageBySiteIdInDB(site.getId());
         if (anyPage != null) {
             if (TaskManagerEngine.isCancel()) {
                 site.setStatus(SiteStatusType.FAILED);

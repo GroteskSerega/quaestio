@@ -3,10 +3,10 @@ package searchengine.core.engine;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import searchengine.components.PagesComponent;
-import searchengine.components.SitesComponent;
+import searchengine.components.*;
 import searchengine.config.JsoupConfig;
 import searchengine.core.utility.JsoupUtility;
+import searchengine.model.Lemma;
 import searchengine.model.Page;
 import searchengine.model.Site;
 
@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static searchengine.logging.LoggingTemplates.TEMPLATE_RECURSIVE_TASK_MANAGER_ENGINE_LINK;
 
-// TODO SOME SPAGHETTI CODE WITH JsoupUtility class. NEED REFACTORING
 @Slf4j
 @Getter
 @RequiredArgsConstructor
@@ -29,17 +28,23 @@ public class TaskManagerEngine extends RecursiveTask<Set<String>> {
 
     private final SitesComponent sitesComponent;
     private final PagesComponent pagesComponent;
+    private final LemmasComponent lemmasComponent;
+    private final IndexesComponent indexesComponent;
+
+    private final LuceneMorphologyComponent luceneMorphologyComponent;
 
     private final JsoupConfig jsoupConfig;
 
-    private static final AtomicBoolean cancelled =
+    private static AtomicBoolean cancelled =
             new AtomicBoolean();
 
-
     private static final int MIN_WAITING_MILLISECONDS = 100;
-    private static final int MAX_WAITING_MILLISECONDS = 1500;
+    private static final int MAX_WAITING_MILLISECONDS = 200;
 
-    private static final Object SYNC = new Object();
+    private static final String FIRST_CHAR_LINK_FOR_VALIDATE = "/";
+    private static final String REGEX_VALID_LINKS = "^/.+";
+    private static final String TEMPLATE_REGEX_VERTEX_LINK = "%s.+";
+
 
     public static void setRunning() {
         cancelled.set(false);
@@ -70,55 +75,35 @@ public class TaskManagerEngine extends RecursiveTask<Set<String>> {
 
         log.info(TEMPLATE_RECURSIVE_TASK_MANAGER_ENGINE_LINK, link);
 
-        Page newPage = createNewPage(link);
+        Page newPage = JsoupUtility.createPageByLink(link, jsoupConfig);
+        if (newPage == null) {
+            return linkSet;
+        }
 
-        Set<String> childrenLinks = JsoupUtility.getChildrenPageLinks(link,
-                newPage,
-                jsoupConfig);
+        String uri = link.substring(site.getUrl().length() - 1);
+        newPage.setPath(uri);
+        newPage.setSite(site);
+
+        Set<String> childrenLinks =
+                JsoupUtility.getLinksFromContent(newPage.getContent());
 
         if (childrenLinks.isEmpty()) {
             return linkSet;
         }
 
-        // TODO change current logic to PESSIMISTIC_WRITE OR SOMETHING
-        // CURRENT LOGIC:
-        // -:
-        // NOT EFFECTIVE FOR SEVERAL SITES
-        // NOT WORKED FOR SEVERAL INSTANCE OF THESE APP
-        // +:
-        // NOT CREATE DUPLICATE OF PAGES IN DATABASE
-        synchronized (SYNC) {
-            pagesComponent.readAndInsertPage(site.getId(), newPage);
-            site.setStatusTime(LocalDateTime.now());
-            sitesComponent.saveSiteToDB(site);
-        }
+        Page savedPage = pagesComponent.selectOrInsertPageToDB(newPage);
+        site.setStatusTime(LocalDateTime.now());
+        sitesComponent.saveSiteToDB(site);
 
-//        log.info("\nLink: {} \nChildren links: \n{}",
-//                link,
-//                Arrays.toString(childrenLinks.toArray()));
+        processingLemmasAndIndexes(savedPage);
 
         Set<String> filteredLinks =
-                JsoupUtility.filteringLinksByHostAndCreateFullLink(childrenLinks,
+                filteringLinksByHostAndCreateFullLink(childrenLinks,
                         vertexLink);
 
-//        log.info("\nLink: {} \nFiltered links: \n{}",
-//                link,
-//                Arrays.toString(filteredLinks.toArray()));
+        removeLinksThatAlreadySaved(filteredLinks);
 
-        removeLinksNotRelatedToSite(filteredLinks);
-
-        List<TaskManagerEngine> taskList = new ArrayList<>();
-
-        for (String link : filteredLinks) {
-            TaskManagerEngine task = new TaskManagerEngine(link,
-                    vertexLink,
-                    site,
-                    sitesComponent,
-                    pagesComponent,
-                    jsoupConfig);
-            task.fork();
-            taskList.add(task);
-        }
+        List<TaskManagerEngine> taskList = createNewTasks(filteredLinks);
 
         for (TaskManagerEngine task : taskList) {
             linkSet.addAll(task.join());
@@ -135,27 +120,76 @@ public class TaskManagerEngine extends RecursiveTask<Set<String>> {
                 MIN_WAITING_MILLISECONDS;
     }
 
-    private Page createNewPage(String link) {
-        String uri = link.substring(site.getUrl().length() - 1);
-
-        Page newPage = new Page();
-        newPage.setSite(site);
-        newPage.setPath(uri);
-        return newPage;
-    }
-
-    private void removeLinksNotRelatedToSite(Set<String> filteredLinks) {
+    private void removeLinksThatAlreadySaved(Set<String> filteredLinks) {
         Iterator<String> linkIterator = filteredLinks.iterator();
 
         while (linkIterator.hasNext()) {
             String newLink = linkIterator.next();
 
             String candidateUri = newLink.substring(site.getUrl().length() - 1);
-            Page pageCandidate = pagesComponent.findFirstPageBySiteIdAndPath(site.getId(), candidateUri);
+            Page pageCandidate = pagesComponent.findFirstPageBySiteIdAndPathInDB(site.getId(), candidateUri);
 
             if (pageCandidate != null) {
                 linkIterator.remove();
             }
+        }
+    }
+
+    private List<TaskManagerEngine> createNewTasks(Set<String> filteredLinks) {
+        List<TaskManagerEngine> taskList = new ArrayList<>();
+
+        for (String link : filteredLinks) {
+            TaskManagerEngine task = new TaskManagerEngine(link,
+                    vertexLink,
+                    site,
+                    sitesComponent,
+                    pagesComponent,
+                    lemmasComponent,
+                    indexesComponent,
+                    luceneMorphologyComponent,
+                    jsoupConfig);
+            task.fork();
+            taskList.add(task);
+        }
+        return taskList;
+    }
+
+    private static Set<String> filteringLinksByHostAndCreateFullLink(Set<String> links,
+                                                                    String vertexLink) {
+        Set<String> filteredLinks = new HashSet<>();
+
+        String regexCheckLinkByVertexLink =
+                String.format(TEMPLATE_REGEX_VERTEX_LINK, vertexLink);
+
+        for (String link: links) {
+            boolean isValidLink = link.matches(REGEX_VALID_LINKS);
+            boolean isLinkWithVertexLink =
+                    link.matches(regexCheckLinkByVertexLink);
+
+            if (isLinkWithVertexLink) {
+                filteredLinks.add(link);
+            }
+
+            if (isValidLink) {
+                if (link.startsWith(FIRST_CHAR_LINK_FOR_VALIDATE)) {
+                    link = vertexLink.concat(link.substring(1));
+                }
+                filteredLinks.add(link);
+            }
+        }
+        return filteredLinks;
+    }
+
+    private void processingLemmasAndIndexes(Page savedPage) {
+        String text =
+                luceneMorphologyComponent.getTextFromHTML(savedPage.getContent());
+
+        for (LuceneMorphologyComponent.Lang lang: LuceneMorphologyComponent.Lang.values()) {
+            Map<String, Integer> mapOfLemmas =
+                    luceneMorphologyComponent.calculateLemmas(text,
+                            lang);
+            Iterable<Lemma> lemmasIterable = lemmasComponent.prepareAndSaveLemmas(mapOfLemmas, savedPage);
+            indexesComponent.prepareAndSaveIndexes(mapOfLemmas, lemmasIterable, savedPage);
         }
     }
 }

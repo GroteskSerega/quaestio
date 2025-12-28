@@ -9,7 +9,11 @@ public interface PagesComponent {
     Iterable<Page> savePagesToDB(List<Page> pages);
     Page savePageToDB(Page page);
     void deletePagesInDB(List<Site> sites);
-    Page findFirstPageBySiteIdAndPath(Integer siteId, String path);
-    Page findFirstPageBySiteId(Integer siteId);
-    void readAndInsertPage(Integer siteId, Page page);
+    void deletePageBySiteIdAndPathInDB(Integer siteId, String path);
+    Page findFirstPageBySiteIdAndPathInDB(Integer siteId, String path);
+    Page findFirstPageBySiteIdInDB(Integer siteId);
+    Page selectOrInsertPageToDB(Page page);
+    Integer countAllBySiteId(Integer siteId);
+    List<Page> getPagesBySiteId(Integer siteId);
+    List<Integer> findAllIdsBySiteId(Integer siteId);
 }
