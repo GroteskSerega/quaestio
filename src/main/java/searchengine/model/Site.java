@@ -11,13 +11,12 @@ import java.time.LocalDateTime;
 @Setter
 @ToString
 @Entity
+@Table(name = "site")
 public class Site {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-//    @Column(columnDefinition = "ENUM('INDEXING', 'INDEXED', 'FAILED')", nullable = false)
-//    @Column(columnDefinition = "ENUM")
     @Enumerated(EnumType.STRING)
     private SiteStatusType status;
 

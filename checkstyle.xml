@@ -34,7 +34,7 @@
             <property name="max" value="50"/>
             <property name="countEmpty" value="false"/>
             <message key="maxLen.method"
-                     value="Количество строк в методе {0,number,integer} (без учета пустых строк) первышает допустимое количество в {1,number,integer} строк. Совет:разделите метод на несколько"/>
+                     value="Количество строк в методе {0,number,integer} (без учета пустых строк) превышает допустимое количество в {1,number,integer} строк. Совет:разделите метод на несколько"/>
         </module>
 
         <module name="EmptyBlock"/>

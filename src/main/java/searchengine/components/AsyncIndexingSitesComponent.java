@@ -4,6 +4,6 @@ import searchengine.model.Site;
 
 import java.util.List;
 
-public interface AsyncIndexingComponent {
+public interface AsyncIndexingSitesComponent {
     void startAsyncProcessIndexingSites(List<Site> existingSites);
 }

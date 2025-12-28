@@ -3,25 +3,29 @@ server:
 
 app:
   name: quastio
-  version: 0.0.1
-  thread-count: 2
+  version: 0.1.1
+  thread-count: 3
 
 spring:
   datasource:
     username: user
     password: pass
     url: jdbc:mysql://localhost:3306/search_engine?useSSL-false&requireSSL=false&allowPublicKeyRetrieval=true
-    #driver-class-name: com.mysql.cj.jdbc.Driver
+    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
+    #properties:
+      #hibernate:
+        #dialect: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
+  liquibase:
+    enabled: true
+    change-log: classpath:/db/changelog/db.changelog-master.xml
 
 jsoup-settings:
   user-agent: QuastioSearchBot
+  #user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36
   referrer: http://www.google.com
 
 indexing-settings:

@@ -1,7 +1,7 @@
 package searchengine.services;
 
-import searchengine.dto.statistics.StatisticsResponse;
+import org.springframework.http.ResponseEntity;
 
-public interface StatisticsService {
-    StatisticsResponse getStatistics();
+public interface StatisticsService<T> {
+    ResponseEntity<T> getStatistics();
 }

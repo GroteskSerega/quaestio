@@ -5,7 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import searchengine.components.AsyncIndexingComponent;
+import searchengine.components.AsyncIndexPageComponent;
+import searchengine.components.AsyncIndexingSitesComponent;
 import searchengine.components.SitesComponent;
 import searchengine.core.engine.TaskManagerEngine;
 import searchengine.dto.ResponseBody;
@@ -15,6 +16,7 @@ import searchengine.model.SiteStatusType;
 
 import java.util.*;
 
+import static searchengine.httpstatuscodes.HttpStatusCodes.*;
 import static searchengine.logging.LoggingTemplates.*;
 import static searchengine.messages.MessagesTemplates.*;
 
@@ -26,10 +28,8 @@ public class ApisServiceImpl implements ApisService<ResponseBody> {
 
     private final SitesComponent sitesComponent;
 
-    private final AsyncIndexingComponent asyncIndexingComponent;
-
-    private static final int HTTP_CODE_ACCEPT = 202;
-    private static final int HTTP_CODE_OK = 200;
+    private final AsyncIndexingSitesComponent asyncIndexingSitesComponent;
+    private final AsyncIndexPageComponent asyncIndexPageComponent;
 
     @Override
     public ResponseEntity<ResponseBody> startIndexing() {
@@ -44,7 +44,7 @@ public class ApisServiceImpl implements ApisService<ResponseBody> {
             }
         }
 
-        asyncIndexingComponent.startAsyncProcessIndexingSites(existingSites);
+        asyncIndexingSitesComponent.startAsyncProcessIndexingSites(existingSites);
 
         return createSuccessResponseEntity(HttpStatusCode.valueOf(HTTP_CODE_ACCEPT));
     }
@@ -73,6 +73,22 @@ public class ApisServiceImpl implements ApisService<ResponseBody> {
         TaskManagerEngine.cancel();
 
         return createSuccessResponseEntity(HttpStatusCode.valueOf(HTTP_CODE_OK));
+    }
+
+    @Override
+    public ResponseEntity<ResponseBody> indexPage(String url) {
+        log.info(TEMPLATE_SERVICE_API_REQUEST_INDEX_PAGE, url);
+
+        boolean urlIsValid = sitesComponent.validateUrlByConfig(url);
+
+        if (!urlIsValid) {
+            return createResponseEntityWithError(TEMPLATE_API_INDEXING_PAGE_NOT_RELATED_PAGE,
+                    HttpStatusCode.valueOf(HTTP_CODE_BAD_REQUEST));
+        }
+
+        asyncIndexPageComponent.startAsyncProcessIndexingPage(url);
+
+        return createSuccessResponseEntity(HttpStatusCode.valueOf(HTTP_CODE_ACCEPT));
     }
 
     private ResponseEntity<ResponseBody> createResponseEntityWithError(String template,
