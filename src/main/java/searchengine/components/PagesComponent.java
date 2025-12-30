@@ -14,6 +14,8 @@ public interface PagesComponent {
     Page findFirstPageBySiteIdInDB(Integer siteId);
     Page selectOrInsertPageToDB(Page page);
     Integer countAllBySiteId(Integer siteId);
+    Integer countAllBySiteIdIn(List<Integer> sitesId);
     List<Page> getPagesBySiteId(Integer siteId);
+    Iterable<Page> getPagesByIds(List<Integer> ids);
     List<Integer> findAllIdsBySiteId(Integer siteId);
 }

@@ -80,7 +80,17 @@ public class LemmasComponentImpl implements LemmasComponent {
         return countLemmas;
     }
 
-//    @Transactional
+    @Override
+    public Integer countAllBySiteIdInAndLemma(List<Integer> sitesId, String lemma) {
+        Integer countLemmas = lemmasRepository.countAllBySiteIdInAndLemma(sitesId, lemma);
+        log.info(TEMPLATE_REPOSITORY_LEMMAS_COUNT_BY_SITE_ID_AND_LEMMA,
+                countLemmas,
+                Arrays.toString(sitesId.toArray()),
+                lemma);
+        return countLemmas;
+    }
+
+    //    @Transactional
     @Override
     public Lemma selectForUpdateOrInsertLemma(Lemma lemma) {
         Lemma newLemma;
@@ -153,8 +163,28 @@ public class LemmasComponentImpl implements LemmasComponent {
             newLemma.setSite(page.getSite());
             newLemma.setLemma(entry.getKey());
             newLemma.setFrequency(1);
-            newLemmas.add(newLemma);
+            newLemmas.add(selectForUpdateOrInsertLemma(newLemma));
         }
-        return selectForUpdateOrInsertLemmas(newLemmas);
+        return newLemmas;
+    }
+
+    @Override
+    public Iterable<Lemma> findAllBySiteIdInAndLemmaIn(List<Integer> sitesId, List<String> lemmas) {
+        Iterable<Lemma> lemmaIter = lemmasRepository.findAllBySiteIdInAndLemmaIn(sitesId, lemmas);
+        log.info(TEMPLATE_REPOSITORY_LEMMAS_FOUND_BY_SITE_ID_AND_LEMMAS,
+                lemmaIter,
+                Arrays.toString(sitesId.toArray()),
+                Arrays.toString(lemmas.toArray()));
+        return lemmaIter;
+    }
+
+    @Override
+    public List<Integer> findAllIdBySiteIdInAndLemma(List<Integer> siteId, String lemma) {
+        List<Integer> ids = lemmasRepository.findAllIdBySiteIdInAndLemma(siteId, lemma);
+        log.info(TEMPLATE_REPOSITORY_LEMMAS_ID_FOUND_BY_SITE_ID_AND_LEMMA,
+                Arrays.toString(ids.toArray()),
+                Arrays.toString(siteId.toArray()),
+                lemma);
+        return ids;
     }
 }

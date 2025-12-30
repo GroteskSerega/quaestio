@@ -80,7 +80,7 @@ public class SitesComponentImpl implements SitesComponent {
                 existingSites.add(foundedSite);
             }
         }
-        log.info(TEMPLATE_REPOSITORY_SITES_FOUNDED,
+        log.info(TEMPLATE_REPOSITORY_SITES_FOUND,
                 Arrays.toString(existingSites.toArray()));
         return existingSites;
     }
@@ -122,7 +122,7 @@ public class SitesComponentImpl implements SitesComponent {
         }
 
         Site foundedSite = sitesRepository.findByName(matchConfig.getName());
-        log.info(TEMPLATE_REPOSITORY_SITES_FOUNDED, foundedSite);
+        log.info(TEMPLATE_REPOSITORY_SITES_FOUND, foundedSite);
 
         if (foundedSite != null) {
             return foundedSite;
@@ -159,7 +159,7 @@ public class SitesComponentImpl implements SitesComponent {
             site.setUrl(siteConfig.getUrl());
             sites.add(site);
         }
-        log.info(TEMPLATE_REPOSITORY_SITES_FOUNDED_IN_DB_AND_CONFIG,
+        log.info(TEMPLATE_REPOSITORY_SITES_FOUND_IN_DB_AND_CONFIG,
                 Arrays.toString(sites.toArray()));
         return sites;
     }

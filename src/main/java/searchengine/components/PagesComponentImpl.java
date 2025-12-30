@@ -18,7 +18,6 @@ import static searchengine.logging.LoggingTemplates.*;
 @RequiredArgsConstructor
 @Component
 public class PagesComponentImpl implements PagesComponent {
-
     private final PagesRepository pagesRepository;
 
     private static final Object SYNC_SELECT_OR_INSERT_PAGE_TO_DB = new Object();
@@ -80,7 +79,7 @@ public class PagesComponentImpl implements PagesComponent {
                 pagesRepository.findFirstBySiteIdAndPath(siteId,
                         path);
         Page newPage = pageOpt.orElse(null);
-        log.info(TEMPLATE_REPOSITORY_PAGES_FOUNDED_BY_SITE_ID_AND_URI,
+        log.info(TEMPLATE_REPOSITORY_PAGES_FOUND_BY_SITE_ID_AND_URI,
                 siteId,
                 path,
                 newPage != null ? newPage.getId() : null);
@@ -91,7 +90,7 @@ public class PagesComponentImpl implements PagesComponent {
     public Page findFirstPageBySiteIdInDB(Integer siteId) {
         Page foundedPage =
                 pagesRepository.findFirstBySiteId(siteId);
-        log.info(TEMPLATE_REPOSITORY_PAGES_FIRST_FOUNDED_BY_SITE_ID,
+        log.info(TEMPLATE_REPOSITORY_PAGES_FIRST_FOUND_BY_SITE_ID,
                 siteId,
                 foundedPage != null ? foundedPage.getId() : null);
         return foundedPage;
@@ -114,7 +113,7 @@ public class PagesComponentImpl implements PagesComponent {
                             page.getPath());
             newPage = pageOpt.orElseGet(() -> savePageToDB(page));
         }
-        log.info(TEMPLATE_REPOSITORY_PAGES_FOUNDED_BY_SITE_ID_AND_URI,
+        log.info(TEMPLATE_REPOSITORY_PAGES_FOUND_BY_SITE_ID_AND_URI,
                 page.getSite().getId(),
                 page.getPath(),
                 newPage.getId());
@@ -126,19 +125,38 @@ public class PagesComponentImpl implements PagesComponent {
         Integer countPages = pagesRepository.countAllBySiteId(siteId);
         log.info(TEMPLATE_REPOSITORY_PAGES_COUNT_BY_SITE_ID,
                 countPages,
-                countPages);
+                siteId);
+        return countPages;
+    }
+
+    @Override
+    public Integer countAllBySiteIdIn(List<Integer> sitesId) {
+        Integer countPages = pagesRepository.countAllBySiteIdIn(sitesId);
+        log.info(TEMPLATE_REPOSITORY_PAGES_COUNT_BY_SITE_ID,
+                countPages,
+                Arrays.toString(sitesId.toArray()));
         return countPages;
     }
 
     @Override
     public List<Page> getPagesBySiteId(Integer siteId) {
         List<Page> foundedPages = pagesRepository.getAllBySiteId(siteId);
-        log.info(TEMPLATE_REPOSITORY_PAGES_FOUNDED_LIST_IDS_BY_SITE_ID,
+        log.info(TEMPLATE_REPOSITORY_PAGES_FOUND_LIST_IDS_BY_SITE_ID,
                 Arrays.toString(foundedPages
                         .stream()
                         .map(Page::getPath)
                         .toArray()));
         return foundedPages;
+    }
+
+    @Override
+    public Iterable<Page> getPagesByIds(List<Integer> ids) {
+        Iterable<Page> pageIter = pagesRepository.findAllById(ids);
+        pageIter.forEach(page ->
+                log.info(TEMPLATE_REPOSITORY_PAGES_FOUND_BY_IDS,
+                        page.getId(),
+                        Arrays.toString(ids.toArray())));
+        return pageIter;
     }
 
     @Override

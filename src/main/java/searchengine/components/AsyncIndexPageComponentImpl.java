@@ -61,7 +61,7 @@ public class AsyncIndexPageComponentImpl implements AsyncIndexPageComponent {
         String text =
                 luceneMorphologyComponent.getTextFromHTML(savedPage.getContent());
 
-        for (LuceneMorphologyComponent.Lang lang: LuceneMorphologyComponent.Lang.values()) {
+        for (LuceneMorphologyComponent.Lang lang : LuceneMorphologyComponent.Lang.values()) {
             Map<String, Integer> mapOfLemmas =
                     luceneMorphologyComponent.calculateLemmas(text,
                             lang);

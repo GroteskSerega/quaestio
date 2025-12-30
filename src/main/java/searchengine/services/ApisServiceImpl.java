@@ -7,10 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import searchengine.components.AsyncIndexPageComponent;
 import searchengine.components.AsyncIndexingSitesComponent;
+import searchengine.components.ResponseEntityComponent;
 import searchengine.components.SitesComponent;
 import searchengine.core.engine.TaskManagerEngine;
 import searchengine.dto.ResponseBody;
-import searchengine.dto.api.IndexingResponse;
 import searchengine.model.Site;
 import searchengine.model.SiteStatusType;
 
@@ -27,6 +27,7 @@ import static searchengine.messages.MessagesTemplates.*;
 public class ApisServiceImpl implements ApisService<ResponseBody> {
 
     private final SitesComponent sitesComponent;
+    private final ResponseEntityComponent responseEntityComponent;
 
     private final AsyncIndexingSitesComponent asyncIndexingSitesComponent;
     private final AsyncIndexPageComponent asyncIndexPageComponent;
@@ -39,14 +40,17 @@ public class ApisServiceImpl implements ApisService<ResponseBody> {
 
         for (Site site : existingSites) {
             if (site.getStatus().equals(SiteStatusType.INDEXING)) {
-                return createResponseEntityWithError(TEMPLATE_API_INDEXING_ALREADY_STARTED,
+                return responseEntityComponent.createResponseEntity(TEMPLATE_API_INDEXING_ALREADY_STARTED,
+                        false,
                         HttpStatusCode.valueOf(HTTP_CODE_ACCEPT));
             }
         }
 
         asyncIndexingSitesComponent.startAsyncProcessIndexingSites(existingSites);
 
-        return createSuccessResponseEntity(HttpStatusCode.valueOf(HTTP_CODE_ACCEPT));
+        return responseEntityComponent.createResponseEntity(null,
+                true,
+                HttpStatusCode.valueOf(HTTP_CODE_ACCEPT));
     }
 
     @Override
@@ -66,13 +70,16 @@ public class ApisServiceImpl implements ApisService<ResponseBody> {
         }
 
         if (!indexingStarted) {
-            return createResponseEntityWithError(TEMPLATE_API_INDEXING_NOT_STARTED,
+            return responseEntityComponent.createResponseEntity(TEMPLATE_API_INDEXING_NOT_STARTED,
+                    false,
                     HttpStatusCode.valueOf(HTTP_CODE_OK));
         }
 
         TaskManagerEngine.cancel();
 
-        return createSuccessResponseEntity(HttpStatusCode.valueOf(HTTP_CODE_OK));
+        return responseEntityComponent.createResponseEntity(null,
+                true,
+                HttpStatusCode.valueOf(HTTP_CODE_OK));
     }
 
     @Override
@@ -82,32 +89,15 @@ public class ApisServiceImpl implements ApisService<ResponseBody> {
         boolean urlIsValid = sitesComponent.validateUrlByConfig(url);
 
         if (!urlIsValid) {
-            return createResponseEntityWithError(TEMPLATE_API_INDEXING_PAGE_NOT_RELATED_PAGE,
+            return responseEntityComponent.createResponseEntity(TEMPLATE_API_INDEXING_PAGE_NOT_RELATED_PAGE,
+                    false,
                     HttpStatusCode.valueOf(HTTP_CODE_BAD_REQUEST));
         }
 
         asyncIndexPageComponent.startAsyncProcessIndexingPage(url);
 
-        return createSuccessResponseEntity(HttpStatusCode.valueOf(HTTP_CODE_ACCEPT));
-    }
-
-    private ResponseEntity<ResponseBody> createResponseEntityWithError(String template,
-                                                                       HttpStatusCode httpStatusCode) {
-        IndexingResponse errorBody = new IndexingResponse();
-        errorBody.setResult(false);
-        errorBody.setError(template);
-        log.info(TEMPLATE_SERVICE_RESPONSE,
-                httpStatusCode,
-                errorBody);
-        return new ResponseEntity<>(errorBody, httpStatusCode);
-    }
-
-    private ResponseEntity<ResponseBody> createSuccessResponseEntity(HttpStatusCode httpStatusCode) {
-        IndexingResponse responseBody = new IndexingResponse();
-        responseBody.setResult(true);
-        log.info(TEMPLATE_SERVICE_RESPONSE,
-                responseBody,
-                httpStatusCode);
-        return new ResponseEntity<>(responseBody, httpStatusCode);
+        return responseEntityComponent.createResponseEntity(null,
+                true,
+                HttpStatusCode.valueOf(HTTP_CODE_ACCEPT));
     }
 }
