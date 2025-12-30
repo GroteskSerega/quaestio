@@ -3,11 +3,11 @@ server:
 
 app:
   name: quastio
-  version: 0.1.1
+  version: 1.0.0
   thread-count: 3
 
 search:
-  percent-ignore-lemmas-too-match-found: 95
+  percent-ignore-lemmas-too-match-found: 45
 
 spring:
   datasource:
