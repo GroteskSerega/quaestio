@@ -2,6 +2,8 @@
 quaestio
 
 # Description / Описание
+Fork from project https://github.com/sortedmap/searchengine/tree/master
+
 - Final project for the Java Developer training program from Skillbox.
 
 The application creates an index based on the specified websites and saves the results in a database.
@@ -390,3 +392,36 @@ offset (сдвиг от начала списка результатов) и lim
 Такие ответы должны сопровождаться соответствующими статус-кодами.
 Желательно ограничиться использованием кодов 400, 401, 403, 404, 405 и 500
 при возникновении соответствующих им типов ошибок.
+
+## Текущие вопросы / где требуется внимание
+### Issue 1
+priority: medium (for real project - high)
+Приложение написано с использованием многопоточного фреймворка.
+Используются синхронизированные куски кода.
+
+Классы:
+- PagesComponentImpl startIndexSite()
+- LemmasComponentImpl selectForUpdateOrInsertLemma(), selectForUpdateOrInsertLemmas()
+
+// TODO change current logic to PESSIMISTIC_WRITE OR SOMETHING
+// CURRENT LOGIC:
+// -:
+// NOT EFFECTIVE FOR SEVERAL SITES
+// NOT WORKED FOR SEVERAL INSTANCE OF THESE APP
+// +:
+// NOT CREATE DUPLICATE OF lemma or pages IN DATABASE
+
+### Issue 2
+priority: low
+При завершении процесса индексирования по одному из сайтов с ошибкой (главная страница не доступна) или успешно - по всем сайтам происходит перескок метода scanningStatusOfIndexing()
+Логика работы индексирования продолжается до завершения.
+
+Классы:
+ForkJoinPoolComponentImpl startIndexSite()
+
+        // TODO SOMETIMES saveResultsOfIndexing START EARLY SCANNING STATUS OF RESULT
+        // WHEN SOME pool completed work
+
+### Issue 3
+priority: low
+Написать тесты.
