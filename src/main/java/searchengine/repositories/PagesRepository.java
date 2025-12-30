@@ -30,6 +30,7 @@ public interface PagesRepository extends CrudRepository<Page, Integer> {
     Page findFirstBySiteId(Integer siteId);
 
     Integer countAllBySiteId(Integer siteId);
+    Integer countAllBySiteIdIn(List<Integer> sitesId);
 
     List<Page> getAllBySiteId(Integer siteId);
 

@@ -1,12 +1,16 @@
-package searchengine.dto.statistics;
+package searchengine.dto.api.search;
+
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import searchengine.dto.ResponseBody;
 
+import java.util.List;
+
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class StatisticsResponse implements ResponseBody {
+public class ResponseSearchContainer implements ResponseBody {
     private boolean result;
-    private StatisticsData statistics;
+    private Integer count;
+    private List<DataPage> data;
 }

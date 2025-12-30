@@ -32,7 +32,6 @@ public class LuceneMorphologyComponentImpl implements LuceneMorphologyComponent 
 
     @Override
     public Map<String, Integer> calculateLemmas(String text, Lang lang) {
-
         Map<String, Integer> lemmasCount = calculateWords(text, lang);
         log.info("Collect words: {}",
                 lemmasCount.size());

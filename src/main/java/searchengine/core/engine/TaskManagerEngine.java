@@ -45,6 +45,7 @@ public class TaskManagerEngine extends RecursiveTask<Set<String>> {
     private static final String REGEX_VALID_LINKS = "^/.+";
     private static final String TEMPLATE_REGEX_VERTEX_LINK = "%s.+";
 
+    private static final Object SYNC_SELECT_INDEXES = new Object();
 
     public static void setRunning() {
         cancelled.set(false);
@@ -88,6 +89,13 @@ public class TaskManagerEngine extends RecursiveTask<Set<String>> {
                 JsoupUtility.getLinksFromContent(newPage.getContent());
 
         if (childrenLinks.isEmpty()) {
+            return linkSet;
+        }
+
+        Page checkExistsPage = pagesComponent.findFirstPageBySiteIdAndPathInDB(newPage.getSite().getId(),
+                newPage.getPath());
+
+        if (checkExistsPage != null) {
             return linkSet;
         }
 
@@ -161,7 +169,7 @@ public class TaskManagerEngine extends RecursiveTask<Set<String>> {
         String regexCheckLinkByVertexLink =
                 String.format(TEMPLATE_REGEX_VERTEX_LINK, vertexLink);
 
-        for (String link: links) {
+        for (String link : links) {
             boolean isValidLink = link.matches(REGEX_VALID_LINKS);
             boolean isLinkWithVertexLink =
                     link.matches(regexCheckLinkByVertexLink);
@@ -184,10 +192,11 @@ public class TaskManagerEngine extends RecursiveTask<Set<String>> {
         String text =
                 luceneMorphologyComponent.getTextFromHTML(savedPage.getContent());
 
-        for (LuceneMorphologyComponent.Lang lang: LuceneMorphologyComponent.Lang.values()) {
+        for (LuceneMorphologyComponent.Lang lang : LuceneMorphologyComponent.Lang.values()) {
             Map<String, Integer> mapOfLemmas =
                     luceneMorphologyComponent.calculateLemmas(text,
                             lang);
+            // savedPage can be exist
             Iterable<Lemma> lemmasIterable = lemmasComponent.prepareAndSaveLemmas(mapOfLemmas, savedPage);
             indexesComponent.prepareAndSaveIndexes(mapOfLemmas, lemmasIterable, savedPage);
         }

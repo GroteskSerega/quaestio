@@ -43,6 +43,7 @@ public class ForkJoinPoolComponentImpl implements ForkJoinPoolComponent {
         ForkJoinPool forkJoinPool = startProcessIndexing(taskManager);
         scanningStatusOfIndexing(forkJoinPool, taskManager);
         // TODO SOMETIMES saveResultsOfIndexing START EARLY SCANNING STATUS OF RESULT
+        // WHEN SOME pool completed work
         saveResultsOfIndexing(taskManager);
         log.info(TEMPLATE_CONFIG_FORK_JOIN_POOL_SHUTDOWN,
                 forkJoinPool);

@@ -8,10 +8,7 @@ import searchengine.model.Lemma;
 import searchengine.model.Page;
 import searchengine.repositories.IndexesRepository;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static searchengine.logging.LoggingTemplates.*;
 
@@ -20,6 +17,8 @@ import static searchengine.logging.LoggingTemplates.*;
 @Component
 public class IndexesComponentImpl implements IndexesComponent {
     private final IndexesRepository indexesRepository;
+
+    private static final Object SYNC_SELECT_OR_INSERT_INDEX_TO_DB = new Object();
 
     @Override
     public void deleteFirstFoundIndexByPageIdAndLemmaIdInDB(Integer pageId, Integer lemmaId) {
@@ -51,10 +50,26 @@ public class IndexesComponentImpl implements IndexesComponent {
     }
 
     @Override
+    public Index selectOrInsertIndexToDB(Index index) {
+        Index newIndex;
+        synchronized (SYNC_SELECT_OR_INSERT_INDEX_TO_DB) {
+            Optional<Index> indexOpt =
+                    indexesRepository.findByLemmaIdAndPageId(index.getLemma().getId(),
+                            index.getLemma().getId());
+            newIndex = indexOpt.orElseGet(() -> saveIndexToDB(index));
+        }
+        log.info(TEMPLATE_REPOSITORY_INDEXES_FOUND_BY_LEMMA_ID_AND_PAGE_ID,
+                index.getLemma().getId(),
+                index.getPage().getId(),
+                index.getId());
+        return newIndex;
+    }
+
+    @Override
     public Index saveIndexToDB(Index index) {
-        log.info(TEMPLATE_REPOSITORY_INDEXES_TRY_TO_SAVE, index);
+        log.info(TEMPLATE_REPOSITORY_INDEXES_TRY_TO_SAVE, index.getLemma().getLemma());
         Index savedIndex = indexesRepository.save(index);
-        log.info(TEMPLATE_REPOSITORY_INDEXES_SAVED, savedIndex);
+        log.info(TEMPLATE_REPOSITORY_INDEXES_SAVED, savedIndex.getId());
         return savedIndex;
     }
 
@@ -79,9 +94,9 @@ public class IndexesComponentImpl implements IndexesComponent {
             newIndex.setLemma(lemma);
             newIndex.setPage(page);
             newIndex.setRank(Float.valueOf(mapOfLemmas.get(lemma.getLemma())));
-            newIndexes.add(newIndex);
+            newIndexes.add(selectOrInsertIndexToDB(newIndex));
         }
-        return saveIndexesToDB(newIndexes);
+        return newIndexes;
     }
 
     @Override
@@ -97,7 +112,7 @@ public class IndexesComponentImpl implements IndexesComponent {
     public Iterable<Index> findAllById(List<Integer> ids) {
         Iterable<Index> indexIter = indexesRepository.findAllById(ids);
         indexIter.forEach(index ->
-                log.info(TEMPLATE_REPOSITORY_INDEXES_FOUNDED,
+                log.info(TEMPLATE_REPOSITORY_INDEXES_FOUND,
                         index.getId()));
         return indexIter;
     }
@@ -106,8 +121,47 @@ public class IndexesComponentImpl implements IndexesComponent {
     public Iterable<Index> findAllByPageId(Integer pageId) {
         Iterable<Index> indexIter = indexesRepository.findAllByPageId(pageId);
         indexIter.forEach(index ->
-                log.info(TEMPLATE_REPOSITORY_INDEXES_FOUNDED,
+                log.info(TEMPLATE_REPOSITORY_INDEXES_FOUND,
                         index.getId()));
         return indexIter;
+    }
+
+    @Override
+    public Integer countAllByLemmaIdIn(List<Integer> lemmaId) {
+        Integer countRows = indexesRepository.countAllByLemmaIdIn(lemmaId);
+        log.info(TEMPLATE_REPOSITORY_INDEXES_COUNT_ROWS_BY_LEMMAS_ID,
+                countRows,
+                Arrays.toString(lemmaId.toArray()));
+        return countRows;
+    }
+
+    @Override
+    public List<Integer> findAllPageIdsBySiteIdInAndLemmaId(List<Integer> sitesId, Integer lemmaId) {
+        List<Integer> pagesIds = indexesRepository.findAllPageIdsBySiteIdInAndLemmaId(sitesId, lemmaId);
+        log.info(TEMPLATE_REPOSITORY_INDEXES_FOUND_PAGE_IDS_BY_SITE_IDS_AND_LEMMA_ID,
+                Arrays.toString(pagesIds.toArray()),
+                Arrays.toString(sitesId.toArray()),
+                lemmaId);
+        return pagesIds;
+    }
+
+    @Override
+    public List<Integer> findAllPageIdsBySiteIdInAndLemma(List<Integer> sitesId, String lemma) {
+        List<Integer> pagesIds = indexesRepository.findAllPageIdsBySiteIdInAndLemma(sitesId, lemma);
+        log.info(TEMPLATE_REPOSITORY_INDEXES_FOUND_PAGE_IDS_BY_SITE_IDS_AND_LEMMA_ID,
+                Arrays.toString(pagesIds.toArray()),
+                Arrays.toString(sitesId.toArray()),
+                lemma);
+        return pagesIds;
+    }
+
+    @Override
+    public Index findFirstByPageIdAndLemmaId(Integer pageId, Integer lemmaId) {
+        Index index = indexesRepository.findFirstByPageIdAndLemmaId(pageId, lemmaId);
+        log.info(TEMPLATE_REPOSITORY_INDEXES_FOUND_BY_LEMMA_ID_AND_PAGE_ID,
+                lemmaId,
+                pageId,
+                index != null ? index.getId() : null);
+        return index;
     }
 }

@@ -9,6 +9,8 @@ public class LoggingTemplates {
             "!!!!!Sites Config is empty. Application will stop.";
     public static final String TEMPLATE_CONFIG_JSOUP_HEADERS_CONFIG =
             "Jsoup config: {}";
+    public static final String TEMPLATE_CONFIG_SEARCH =
+            "Search config: precent of rare lemma less than {}";
 
     public static final String TEMPLATE_SERVICE_API =
             "Request: method {}, uri {}";
@@ -20,13 +22,15 @@ public class LoggingTemplates {
             "Request: Post /api/indexPage. Form param url: {}";
     public static final String TEMPLATE_SERVICE_API_REQUEST_STATISTICS =
             "Request: Get /api/statistics";
+    public static final String TEMPLATE_SERVICE_API_REQUEST_SEARCH =
+            "Request: Get /api/search. query: {}, offset: {}, limit: {}, site: {}";
     public static final String TEMPLATE_SERVICE_RESPONSE = "Response: {}\n{}";
     public static final String TEMPLATE_SERVICE_RESPONSE_CODE = "Response code: {}";
 
-    public static final String TEMPLATE_REPOSITORY_SITES_FOUNDED =
-            "Founded sites in DB: {}";
-    public static final String TEMPLATE_REPOSITORY_SITES_FOUNDED_IN_DB_AND_CONFIG =
-            "Founded sites in DB and config: {}";
+    public static final String TEMPLATE_REPOSITORY_SITES_FOUND =
+            "Found sites in DB: {}";
+    public static final String TEMPLATE_REPOSITORY_SITES_FOUND_IN_DB_AND_CONFIG =
+            "Found sites in DB and config: {}";
     public static final String TEMPLATE_REPOSITORY_SITES_TRY_TO_SAVE =
             "Try to save sites in DB: {}";
     public static final String TEMPLATE_REPOSITORY_SITES_SAVED =
@@ -38,14 +42,14 @@ public class LoggingTemplates {
 
     public static final String TEMPLATE_REPOSITORY_PAGES_COUNT_BY_SITE_ID =
             "Count pages in DB: {} by siteId {}";
-    public static final String TEMPLATE_REPOSITORY_PAGES_FOUNDED_LIST_IDS_BY_SITE_ID =
-            "Founded pages ids in DB: {}";
-    public static final String TEMPLATE_REPOSITORY_PAGES_FOUNDED =
-            "Founded pages in DB: {}";
-    public static final String TEMPLATE_REPOSITORY_PAGES_FOUNDED_BY_SITE_ID_AND_URI =
-            "Founded page by siteId:{} and uri:{} in DB: {}";
-    public static final String TEMPLATE_REPOSITORY_PAGES_FIRST_FOUNDED_BY_SITE_ID =
-            "Founded first page by siteId:{} in DB: {}";
+    public static final String TEMPLATE_REPOSITORY_PAGES_FOUND_LIST_IDS_BY_SITE_ID =
+            "Found pages ids in DB: {}";
+    public static final String TEMPLATE_REPOSITORY_PAGES_FOUND_BY_IDS =
+            "Found pages in DB: {} by ids: {}";
+    public static final String TEMPLATE_REPOSITORY_PAGES_FOUND_BY_SITE_ID_AND_URI =
+            "Found page by siteId:{} and uri:{} in DB: {}";
+    public static final String TEMPLATE_REPOSITORY_PAGES_FIRST_FOUND_BY_SITE_ID =
+            "Found first page by siteId:{} in DB: {}";
     public static final String TEMPLATE_REPOSITORY_PAGES_TRY_TO_SAVE =
             "Try to save pages in DB: siteId: {} and path: {} ";
     public static final String TEMPLATE_REPOSITORY_PAGES_SAVED =
@@ -64,8 +68,13 @@ public class LoggingTemplates {
             "Deleted pages in DB by siteId: {} and path: {}";
 
     public static final String TEMPLATE_REPOSITORY_LEMMAS_COUNT_BY_SITE_ID =
-            "Count lemmas in DB: {} by siteId {}";
-    public static final String TEMPLATE_REPOSITORY_LEMMAS_FOUNDED = "";
+            "Count lemmas in DB: {} by siteId: {}";
+    public static final String TEMPLATE_REPOSITORY_LEMMAS_COUNT_BY_SITE_ID_AND_LEMMA =
+            "Count lemmas in DB: {} by siteId: {} and lemma: {}";
+    public static final String TEMPLATE_REPOSITORY_LEMMAS_ID_FOUND_BY_SITE_ID_AND_LEMMA =
+            "Found lemmas in DB: {} by siteId: {} and lemma: {}";
+    public static final String TEMPLATE_REPOSITORY_LEMMAS_FOUND_BY_SITE_ID_AND_LEMMAS =
+            "Found lemmas in DB: {} by sitesId: {} and lemmas: {}";
     public static final String TEMPLATE_REPOSITORY_LEMMAS_TRY_TO_SAVE =
             "Try to save lemmas in DB: {}";
     public static final String TEMPLATE_REPOSITORY_LEMMAS_SAVED =
@@ -81,8 +90,14 @@ public class LoggingTemplates {
 
     public static final String TEMPLATE_REPOSITORY_INDEXES_COUNT_BY_SITE_ID =
             "Count indexes ids in DB: {} by siteId {}";
-    public static final String TEMPLATE_REPOSITORY_INDEXES_FOUNDED =
-            "Founded indexes in DB: {}";
+    public static final String TEMPLATE_REPOSITORY_INDEXES_FOUND =
+            "Found indexes in DB: {}";
+    public static final String TEMPLATE_REPOSITORY_INDEXES_FOUND_BY_LEMMA_ID_AND_PAGE_ID =
+            "Found index by lemmaId: {} and pageId:{} in DB: {}";
+    public static final String TEMPLATE_REPOSITORY_INDEXES_FOUND_PAGE_IDS_BY_SITE_IDS_AND_LEMMA_ID =
+            "Found index pageIds in DB: {} by sitesIds: {} and lemmaId: {}";
+    public static final String TEMPLATE_REPOSITORY_INDEXES_COUNT_ROWS_BY_LEMMAS_ID =
+            "Count indexes in DB: {} by lemmaId: {}";
     public static final String TEMPLATE_REPOSITORY_INDEXES_TRY_TO_SAVE =
             "Try to save indexes in DB: {}";
     public static final String TEMPLATE_REPOSITORY_INDEXES_SAVED =
@@ -104,6 +119,14 @@ public class LoggingTemplates {
             "Started processing url {}";
     public static final String TEMPLATE_ENGINE_FINISHED_PROCESSING_URL =
             "Finished processing url {}";
+    public static final String TEMPLATE_SEARCH_CALCULATE_PERCENT_FOR_LEMMA =
+            "Lemma {}, count of pages {}, count of lemma on pages-indexes {}, percent {}";
+    public static final String TEMPLATE_SEARCH_COLLECTED_LEMMAS =
+            "Collected lemmas {}";
+    public static final String TEMPLATE_SEARCH_COLLECTED_RARE_LEMMAS =
+            "Rare lemmas {}";
+    public static final String TEMPLATE_SEARCH_CALCULATED_PAGE_RELEVANCE =
+            "DataPage id: {}, lemmas - Rank: {}, absolute relevance: {}, relative relevance: {}";
 
     public static final String TEMPLATE_CONFIG_FORK_JOIN_POOL_CREATE =
             "CustomForkJoinPool created. {}";
@@ -121,6 +144,8 @@ public class LoggingTemplates {
             "\nLink: {}. HTTP Result code: {}";
     public static final String TEMPLATE_JSOUP_NON_200_HTTP_CODE_LINK_AND_HTTP_RESULT_CODE =
             "\nLink: {}. Returned non 200 response code: {}";
+    public static final String TEMPLATE_JSOUP_SNIPPET_ELEMENT_BY_WORD_FROM_QUERY =
+            "word: {}, element: {}";
 
     public static final String TEMPLATE_COMPONENT_FORK_JOIN_POOL_GET_STATISTIC = """
             ******************************************

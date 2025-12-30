@@ -9,9 +9,19 @@ public class MessagesTemplates {
             "Данная страница находится за пределами сайтов, указанных в конфигурационном файле";
     public static final String TEMPLATE_API_STATISTICS_EMPTY_DB =
             "Отсутствует информация о сайте";
+    public static final String TEMPLATE_API_SEARCH_EMPTY_QUERY =
+            "Задан пустой поисковый запрос";
+    public static final String TEMPLATE_API_FAILED_NOT_FOUND_INDEXED_FOR_SITE =
+            "Нет готового индекса для сайта";
+    public static final String TEMPLATE_API_FAILED_NOT_FOUND_INDEXED_FOR_SITES =
+            "Нет готового индекса для сайтов. Попробуйте выбрать индексированный сайт";
+    public static final String TEMPLATE_API_QUERY_DOES_NOT_CONTAINS_CORRECT_LEMMAS =
+            "Поисковый запрос не содержит лемм для поиска(были указаны только служебные части речи)";
+
 
     public static final String TEMPLATE_REASON_FAILED_BY_USER =
             "Индексация остановлена пользователем";
     public static final String TEMPLATE_REASON_FAILED_SITE_CAN_NOT_BE_REACHED =
             "Ошибка индексации: главная страница сайта не доступна";
+
 }

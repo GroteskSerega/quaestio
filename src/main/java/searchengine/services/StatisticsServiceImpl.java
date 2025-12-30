@@ -8,10 +8,10 @@ import org.springframework.stereotype.Service;
 import searchengine.components.PagesComponent;
 import searchengine.components.SitesComponent;
 import searchengine.dto.ResponseBody;
-import searchengine.dto.statistics.DetailedStatisticsItem;
-import searchengine.dto.statistics.StatisticsData;
-import searchengine.dto.statistics.StatisticsResponse;
-import searchengine.dto.statistics.TotalStatistics;
+import searchengine.dto.api.statistics.DetailedStatisticsItem;
+import searchengine.dto.api.statistics.StatisticsData;
+import searchengine.dto.api.statistics.StatisticsResponse;
+import searchengine.dto.api.statistics.TotalStatistics;
 import searchengine.model.Site;
 import searchengine.model.SiteStatusType;
 import searchengine.repositories.LemmasRepository;
@@ -29,7 +29,7 @@ import static searchengine.messages.MessagesTemplates.TEMPLATE_API_STATISTICS_EM
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StatisticsServiceImpl implements StatisticsService {
+public class StatisticsServiceImpl implements StatisticsService<ResponseBody> {
 
     private final SitesComponent sitesComponent;
     private final PagesComponent pagesComponent;

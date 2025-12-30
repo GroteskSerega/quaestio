@@ -14,7 +14,10 @@ public interface LemmasComponent {
     Lemma saveLemmaToDB(Lemma lemma);
     Iterable<Lemma> saveLemmasToDB(List<Lemma> lemmas);
     Integer countAllBySiteId(Integer siteId);
+    Integer countAllBySiteIdInAndLemma(List<Integer> sitesId, String lemma);
     Lemma selectForUpdateOrInsertLemma(Lemma newLemma);
     Iterable<Lemma> selectForUpdateOrInsertLemmas(List<Lemma> newLemma);
     Iterable<Lemma> prepareAndSaveLemmas(Map<String, Integer> mapOfLemmas, Page page);
+    Iterable<Lemma> findAllBySiteIdInAndLemmaIn(List<Integer> siteId, List<String> lemmas);
+    List<Integer> findAllIdBySiteIdInAndLemma(List<Integer> siteId, String lemma);
 }
