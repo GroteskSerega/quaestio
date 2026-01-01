@@ -95,8 +95,8 @@ spring:
 ```
 
 2.
-- Set params for sites
-- Выставить параметры для переменной sites
+- Set params for sites. If necessary, add new sites for processing
+- Выставить параметры для переменной sites. При необходимости - добавьте новые сайты для обработки
 ```yaml
 indexing-settings:
   sites:
@@ -125,25 +125,37 @@ server:
 ```
 
 # Usage / Использование
-- Command to launch the application
+## 1.Download the distribution / Скачать дистрибутив
+Located on github zip archive.
+
+Расположен на github zip архив.
+
+## 2.Extract files into a catalog / Разархивировать файлы в каталог
 ```
-java -jar SearchEngine.jar --spring.config.location=file:./application.yaml
+mkdir c:\apps\quaestio-1.0.0
 ```
 
-- Команда для запуска приложения
+## 3.Command to launch the application / Команда для запуска приложения
 ```
-java -jar SearchEngine.jar --spring.config.location=file:./application.yaml
+java -jar quaestio-1.0.0.jar --spring.config.location=file:./application.yaml
+```
+
+## 4.Open the application web interface / Открыть web-интерфейс приложения
+```
+http://localhost:8080/
 ```
 
 # Information for developers / Информация для разработчиков
 ## Before work with code / Перед началом работы с кодом
 - To work with the code, you will need:
 - - A development environment that supports Java language level 25 (for example: IntelliJ IDEA 2025.2+)
+- - It is possible to work correctly in the Intellij idea 2025.1.5 environment, but the entire assembly must go through maven
 - - Maven 4 build tool (apache-maven-4.0.0-rc-4)
 
 
 - Для работы с кодом потребуется:
-- - Среда разработки, поддерживающая 25 java language level (например: Intellij idea 2025.2+) 
+- - Среда разработки, поддерживающая 25 java language level (например: Intellij idea 2025.2+)
+- - Возможна корректная работа в среде Intellij idea 2025.1.5, но вся сборка должна идти через maven
 - - Сборщик maven 4 (apache-maven-4.0.0-rc-4)
 
 ## Design App / Дизайн приложения
