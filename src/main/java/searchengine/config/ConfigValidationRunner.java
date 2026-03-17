@@ -7,7 +7,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Component;
 
-import static searchengine.logging.LoggingTemplates.TEMPLATE_CONFIG_SITES_IS_EMPTY;
+import static searchengine.service.LoggingTemplates.TEMPLATE_CONFIG_SITES_IS_EMPTY;
 
 @Slf4j
 @RequiredArgsConstructor

@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import static searchengine.logging.LoggingTemplates.TEMPLATE_CONFIG_SEARCH;
+import static searchengine.service.LoggingTemplates.TEMPLATE_CONFIG_SEARCH;
 
 @Slf4j
 @Getter

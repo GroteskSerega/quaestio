@@ -8,13 +8,13 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import searchengine.config.JsoupConfig;
-import searchengine.model.Page;
+import searchengine.entity.Page;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-import static searchengine.logging.LoggingTemplates.*;
+import static searchengine.service.LoggingTemplates.*;
 
 @Slf4j
 @RequiredArgsConstructor
