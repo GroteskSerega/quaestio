@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import static searchengine.logging.LoggingTemplates.TEMPLATE_CONFIG_APP_CONFIG;
+import static searchengine.service.LoggingTemplates.TEMPLATE_CONFIG_APP_CONFIG;
 
 @Slf4j
 @Getter
@@ -17,8 +17,8 @@ import static searchengine.logging.LoggingTemplates.TEMPLATE_CONFIG_APP_CONFIG;
 @Component
 @ConfigurationProperties(prefix = "app")
 public class AppConfig {
-    private String name;
-    private Integer threadCount;
+
+    private Integer searchEngineForkJoinPoolLimit;
 
     @PostConstruct
     public void printConfig() {

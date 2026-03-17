@@ -159,9 +159,14 @@
     </dependencies>
 
     <repositories>
+<!--        <repository>-->
+<!--            <id>skillbox-gitlab</id>-->
+<!--            <url>https://gitlab.skillbox.ru/api/v4/projects/263574/packages/maven</url>-->
+<!--        </repository>-->
+
         <repository>
-            <id>skillbox-gitlab</id>
-            <url>https://gitlab.skillbox.ru/api/v4/projects/263574/packages/maven</url>
+            <id>local-repo</id>
+            <url>file://${project.basedir}/local-repo</url>
         </repository>
     </repositories>
 

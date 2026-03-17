@@ -1,19 +1,20 @@
 server:
-  port: 8080
+  port: ${APP_PORT:8080}
 
 app:
-  name: quastio
-  version: 1.0.0
-  thread-count: 3
+  search-engine-fork-join-pool-limit: 4
 
 search:
-  percent-ignore-lemmas-too-match-found: 45
+  percent-ignore-lemmas-too-match-found: ${PERCENT_IGNORE_LEMMAS:45}
 
 spring:
+  application:
+    name: quastio
+    version: 1.0.0
   datasource:
-    username: user
-    password: pass
-    url: jdbc:mysql://localhost:3306/search_engine?useSSL-false&requireSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:search_user}
+    password: ${DB_PASSWORD:search_password}
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:search_engine}?${DB_ADDITIONAL_PARAMS:useSSL-false&requireSSL=false&allowPublicKeyRetrieval=true}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     #properties:
@@ -23,7 +24,7 @@ spring:
       ddl-auto: validate
     show-sql: true
   liquibase:
-    enabled: true
+    enabled: ${SPRING_LIQUIBASE_ENABLED:true}
     change-log: classpath:/db/changelog/db.changelog-master.xml
 
 jsoup-settings:

@@ -3,19 +3,19 @@ package searchengine.core.engine;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import searchengine.components.*;
+import searchengine.component.*;
 import searchengine.config.JsoupConfig;
 import searchengine.core.utility.JsoupUtility;
-import searchengine.model.Lemma;
-import searchengine.model.Page;
-import searchengine.model.Site;
+import searchengine.entity.Lemma;
+import searchengine.entity.Page;
+import searchengine.entity.Site;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.RecursiveTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static searchengine.logging.LoggingTemplates.TEMPLATE_RECURSIVE_TASK_MANAGER_ENGINE_LINK;
+import static searchengine.service.LoggingTemplates.TEMPLATE_RECURSIVE_TASK_MANAGER_ENGINE_LINK;
 
 @Slf4j
 @Getter
