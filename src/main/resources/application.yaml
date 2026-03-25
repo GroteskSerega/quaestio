@@ -2,7 +2,9 @@ server:
   port: ${APP_PORT:8080}
 
 app:
-  search-engine-fork-join-pool-limit: 4
+  maxRetriesForDeadLock: 3
+  searchEngineForkJoinPoolLimit: 4
+  secondsWaitForGetStatisticsPool: 5
 
 search:
   percent-ignore-lemmas-too-match-found: ${PERCENT_IGNORE_LEMMAS:45}
@@ -14,15 +16,22 @@ spring:
   datasource:
     username: ${DB_USERNAME:search_user}
     password: ${DB_PASSWORD:search_password}
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:search_engine}?${DB_ADDITIONAL_PARAMS:useSSL-false&requireSSL=false&allowPublicKeyRetrieval=true}
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DB_NAME:search_engine}?${DB_ADDITIONAL_PARAMS:useSSL-false&requireSSL=false&allowPublicKeyRetrieval=true}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 48
+      connection-timeout: 40000
   jpa:
-    #properties:
-      #hibernate:
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
+        order_inserts: true
         #dialect: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: validate
     show-sql: true
+    open-in-view: false
   liquibase:
     enabled: ${SPRING_LIQUIBASE_ENABLED:true}
     change-log: classpath:/db/changelog/db.changelog-master.xml

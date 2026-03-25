@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.List;
 
-import static searchengine.service.LoggingTemplates.TEMPLATE_CONFIG_SITES_CONFIG;
+import static searchengine.config.ConfigLoggingTemplates.TEMPLATE_CONFIG_SITES_CONFIG;
 
 @Slf4j
 @Getter

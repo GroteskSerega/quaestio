@@ -19,33 +19,33 @@ services:
       timeout: 5s
       retries: 5
 
-  quaestio:
-#    build: .
-    image: quaestio:quaestio-layers
-    container_name: quaestio
-    networks:
-      - search_engine
-    ports:
-      - "8080:8080"
-    environment:
-      - APP_PORT=8080
-      - PERCENT_IGNORE_LEMMAS=45
-      - DB_USERNAME=search_user
-      - DB_PASSWORD=search_password
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_NAME=search_engine
-      - DB_ADDITIONAL_PARAMS=useSSL-false&requireSSL=false&allowPublicKeyRetrieval=true
-      - SPRING_LIQUIBASE_ENABLED=true
-#    healthcheck:
-#      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health/readiness"]
-#      interval: 2s
-#      timeout: 1s
-#      retries: 10
-#      start_period: 5s
-    depends_on:
-      mysql:
-        condition: service_healthy
+#  quaestio:
+##    build: .
+#    image: quaestio:quaestio-layers
+#    container_name: quaestio
+#    networks:
+#      - search_engine
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      - APP_PORT=8080
+#      - PERCENT_IGNORE_LEMMAS=45
+#      - DB_USERNAME=search_user
+#      - DB_PASSWORD=search_password
+#      - DB_HOST=mysql
+#      - DB_PORT=3306
+#      - DB_NAME=search_engine
+#      - DB_ADDITIONAL_PARAMS=useSSL-false&requireSSL=false&allowPublicKeyRetrieval=true
+#      - SPRING_LIQUIBASE_ENABLED=true
+##    healthcheck:
+##      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health/readiness"]
+##      interval: 2s
+##      timeout: 1s
+##      retries: 10
+##      start_period: 5s
+#    depends_on:
+#      mysql:
+#        condition: service_healthy
 
 networks:
   search_engine:

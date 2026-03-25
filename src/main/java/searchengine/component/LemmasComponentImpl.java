@@ -3,188 +3,95 @@ package searchengine.component;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+import searchengine.component.lemma.LemmaProcessor;
 import searchengine.entity.Lemma;
 import searchengine.entity.Page;
-import searchengine.entity.Site;
-import searchengine.repository.LemmasRepository;
+import searchengine.repository.LemmaRepository;
 
 import java.util.*;
 
-import static searchengine.service.LoggingTemplates.*;
+import static searchengine.component.ComponentLoggingTemplates.*;
 
 @Slf4j
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 @Component
 public class LemmasComponentImpl implements LemmasComponent {
 
-    private final LemmasRepository lemmasRepository;
+    private final LemmaProcessor lemmaProcessor;
+    private final LemmaRepository lemmaRepository;
 
-    private static final Object SYNC_SELECT_FOR_UPDATE_OR_INSERT_LEMMA = new Object();
-    private static final Object SYNC_SELECT_FOR_UPDATE_OR_INSERT_LEMMAS = new Object();
 
     @Override
-    public void deleteLemmasBySiteIdDB(Integer siteId) {
+    @Transactional
+    public void deleteBySiteIds(List<Integer> siteIds) {
         log.info(TEMPLATE_REPOSITORY_LEMMAS_TRY_TO_DELETE_BY_SITE_ID,
-                siteId);
-        lemmasRepository.deleteAllBySiteId(siteId);
+                Arrays.toString(siteIds.toArray()));
+        lemmaRepository.deleteBySiteIds(siteIds);
         log.info(TEMPLATE_REPOSITORY_LEMMAS_DELETED_BY_SITE_ID,
-                siteId);
+                Arrays.toString(siteIds.toArray()));
     }
 
     @Override
-    public void deleteLemmasInDB(List<Site> sites) {
-        for (Site site : sites) {
-            log.info(TEMPLATE_REPOSITORY_LEMMAS_TRY_TO_DELETE_BY_SITE_ID,
-                    site.getId());
-            lemmasRepository.deleteAllBySiteId(site.getId());
-            log.info(TEMPLATE_REPOSITORY_LEMMAS_DELETED_BY_SITE_ID,
-                    site.getId());
-        }
+    @Transactional
+    public List<Lemma> saveLemmasToDB(List<Lemma> lemmas) {
+        log.info(TEMPLATE_REPOSITORY_LEMMAS_TRY_TO_SAVE, lemmas.size());
+        List<Lemma> lemmaList = lemmaRepository.saveAll(lemmas);
+//        lemmaIterable.forEach(lemma ->
+//                log.info(TEMPLATE_REPOSITORY_LEMMAS_SAVED, lemma));
+        log.info(TEMPLATE_REPOSITORY_LEMMAS_SAVED, lemmas.size());
+        return lemmaList;
     }
 
     @Override
-    public void deleteLemmasByIdsInDB(List<Integer> ids) {
-        log.info(TEMPLATE_REPOSITORY_INDEXES_TRY_TO_DELETE_BY_PAGE_ID,
-                Arrays.toString(ids.toArray()));
-        lemmasRepository.deleteAllByIdIn(ids);
-        log.info(TEMPLATE_REPOSITORY_INDEXES_DELETED_BY_PAGE_ID,
-                Arrays.toString(ids.toArray()));
-    }
-
-    @Override
-    public Lemma saveLemmaToDB(Lemma lemma) {
-        log.info(TEMPLATE_REPOSITORY_LEMMAS_TRY_TO_SAVE,
-                lemma);
-        Lemma savedLemma = lemmasRepository.save(lemma);
-        log.info(TEMPLATE_REPOSITORY_LEMMAS_SAVED,
-                savedLemma);
-        return savedLemma;
-    }
-
-    @Override
-    public Iterable<Lemma> saveLemmasToDB(List<Lemma> lemmas) {
-        lemmas.forEach(lemma ->
-                log.info(TEMPLATE_REPOSITORY_LEMMAS_TRY_TO_SAVE, lemma));
-        Iterable<Lemma> lemmaIterable = lemmasRepository.saveAll(lemmas);
-        lemmaIterable.forEach(lemma ->
-                log.info(TEMPLATE_REPOSITORY_LEMMAS_SAVED, lemma));
-        return lemmaIterable;
-    }
-
-    @Override
-    public Integer countAllBySiteId(Integer siteId) {
-        Integer countLemmas = lemmasRepository.countAllBySiteId(siteId);
-        log.info(TEMPLATE_REPOSITORY_LEMMAS_COUNT_BY_SITE_ID,
-                countLemmas,
-                siteId);
-        return countLemmas;
-    }
-
-    @Override
-    public Integer countAllBySiteIdInAndLemma(List<Integer> sitesId, String lemma) {
-        Integer countLemmas = lemmasRepository.countAllBySiteIdInAndLemma(sitesId, lemma);
-        log.info(TEMPLATE_REPOSITORY_LEMMAS_COUNT_BY_SITE_ID_AND_LEMMA,
-                countLemmas,
-                Arrays.toString(sitesId.toArray()),
-                lemma);
-        return countLemmas;
-    }
-
-    //    @Transactional
-    @Override
-    public Lemma selectForUpdateOrInsertLemma(Lemma lemma) {
-        Lemma newLemma;
-        // TODO change current logic to PESSIMISTIC_WRITE OR SOMETHING
-        // CURRENT LOGIC:
-        // -:
-        // NOT EFFECTIVE FOR SEVERAL SITES
-        // NOT WORKED FOR SEVERAL INSTANCE OF THESE APP
-        // +:
-        // NOT CREATE DUPLICATE OF lemma IN DATABASE
-        synchronized (SYNC_SELECT_FOR_UPDATE_OR_INSERT_LEMMA) {
-            Optional<Lemma> lemmaOpt =
-                    lemmasRepository.findBySiteIdAndLemma(lemma.getSite().getId(), lemma.getLemma());
-
-            if (lemmaOpt.isPresent()) {
-                newLemma = lemmaOpt.get();
-                newLemma.setFrequency(newLemma.getFrequency() + 1);
-            } else {
-                newLemma = new Lemma();
-                newLemma.setSite(lemma.getSite());
-                newLemma.setLemma(lemma.getLemma());
-                newLemma.setFrequency(1);
-            }
-            lemmasRepository.save(newLemma);
-        }
-        return newLemma;
-    }
-
 //    @Transactional
-    @Override
-    public Iterable<Lemma> selectForUpdateOrInsertLemmas(List<Lemma> candidatesLemmas) {
-        Iterable<Lemma> lemmas;
-        // TODO change current logic to PESSIMISTIC_WRITE OR SOMETHING
-        // CURRENT LOGIC:
-        // -:
-        // NOT EFFECTIVE FOR SEVERAL SITES
-        // NOT WORKED FOR SEVERAL INSTANCE OF THESE APP
-        // +:
-        // NOT CREATE DUPLICATE OF lemma IN DATABASE
-        synchronized (SYNC_SELECT_FOR_UPDATE_OR_INSERT_LEMMAS) {
-            List<Lemma> lemmasForUpdateOrInsert = new ArrayList<>();
-            for (Lemma lemma : candidatesLemmas) {
-                Optional<Lemma> lemmaOpt =
-                        lemmasRepository.findBySiteIdAndLemma(lemma.getSite().getId(), lemma.getLemma());
-                Lemma newLemma;
-                if (lemmaOpt.isPresent()) {
-                    newLemma = lemmaOpt.get();
-                    newLemma.setFrequency(newLemma.getFrequency() + 1);
-                } else {
-                    newLemma = new Lemma();
-                    newLemma.setSite(lemma.getSite());
-                    newLemma.setLemma(lemma.getLemma());
-                    newLemma.setFrequency(1);
-                }
-                lemmasForUpdateOrInsert.add(newLemma);
-            }
-            lemmas = lemmasRepository.saveAll(lemmasForUpdateOrInsert);
-        }
-
-        return lemmas;
-    }
-
-    @Override
-    public Iterable<Lemma> prepareAndSaveLemmas(Map<String, Integer> mapOfLemmas,
+    public List<Lemma> prepareAndSaveLemmas(Map<String, Integer> mapOfLemmas,
                                                  Page page) {
-        List<Lemma> newLemmas = new ArrayList<>();
-        for (Map.Entry<String, Integer> entry: mapOfLemmas.entrySet()) {
+        log.info(TEMPLATE_REPOSITORY_LEMMAS_TRY_TO_SAVE,
+                mapOfLemmas.size());
 
-            Lemma newLemma = new Lemma();
-            newLemma.setSite(page.getSite());
-            newLemma.setLemma(entry.getKey());
-            newLemma.setFrequency(1);
-            newLemmas.add(selectForUpdateOrInsertLemma(newLemma));
+        List<Lemma> newLemmas = new ArrayList<>();
+
+        List<String> sortedLemmaNames = new ArrayList<>(mapOfLemmas.keySet());
+        Collections.sort(sortedLemmaNames);
+
+        for (String lemmaName : sortedLemmaNames) {
+
+            Lemma existedLemma =
+                    lemmaProcessor.processLemmaWithLock(page, lemmaName);
+
+            newLemmas.add(existedLemma);
         }
+
+        log.info(TEMPLATE_REPOSITORY_LEMMAS_SAVED,
+                newLemmas.size());
         return newLemmas;
     }
 
     @Override
-    public Iterable<Lemma> findAllBySiteIdInAndLemmaIn(List<Integer> sitesId, List<String> lemmas) {
-        Iterable<Lemma> lemmaIter = lemmasRepository.findAllBySiteIdInAndLemmaIn(sitesId, lemmas);
+    public List<Lemma> findAllBySiteIdInAndLemmaIn(List<Integer> sitesId, List<String> lemmas) {
+        List<Lemma> lemmaList = lemmaRepository.findAllBySiteIdInAndLemmaIn(sitesId, lemmas);
         log.info(TEMPLATE_REPOSITORY_LEMMAS_FOUND_BY_SITE_ID_AND_LEMMAS,
-                lemmaIter,
+                lemmaList,
                 Arrays.toString(sitesId.toArray()),
                 Arrays.toString(lemmas.toArray()));
-        return lemmaIter;
+        return lemmaList;
     }
 
     @Override
     public List<Integer> findAllIdBySiteIdInAndLemma(List<Integer> siteId, String lemma) {
-        List<Integer> ids = lemmasRepository.findAllIdBySiteIdInAndLemma(siteId, lemma);
+        List<Integer> ids = lemmaRepository.findAllIdBySiteIdInAndLemma(siteId, lemma);
         log.info(TEMPLATE_REPOSITORY_LEMMAS_ID_FOUND_BY_SITE_ID_AND_LEMMA,
                 Arrays.toString(ids.toArray()),
                 Arrays.toString(siteId.toArray()),
                 lemma);
         return ids;
+    }
+
+    @Override
+    @Transactional
+    public void deleteById(Integer id) {
+        lemmaRepository.deleteById(id);
     }
 }

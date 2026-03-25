@@ -1,6 +1,6 @@
 package searchengine.web.interceptors;
 
-public class LoggingTemplates {
+public class InterceptorsLoggingTemplates {
     public static final String TEMPLATE_HTTP_REQUEST_LOGGING =
             "\nRequest:\n method: {},\n uri: {},\n query: {},\n remoteAddr: {}\n";
 

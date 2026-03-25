@@ -2,20 +2,24 @@ package searchengine.component;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Connection;
+import org.jsoup.nodes.Document;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import searchengine.config.JsoupConfig;
-import searchengine.core.utility.JsoupUtility;
+import org.springframework.transaction.annotation.Transactional;
+import searchengine.component.core.engine.JsoupComponent;
 import searchengine.entity.*;
+import searchengine.exception.NotFoundSiteException;
+import searchengine.exception.SiteStatusIncorrect;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-import static searchengine.service.LoggingTemplates.TEMPLATE_ENGINE_FINISHED_PROCESSING_URL;
-import static searchengine.service.LoggingTemplates.TEMPLATE_ENGINE_STARTED_PROCESSING_URL;
-import static searchengine.web.dto.MessagesTemplates.TEMPLATE_REASON_FAILED_SITE_CAN_NOT_BE_REACHED;
+import static searchengine.service.ServiceLoggingTemplates.*;
+import static searchengine.web.dto.MessagesTemplates.*;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -29,7 +33,7 @@ public class AsyncIndexPageComponentImpl implements AsyncIndexPageComponent {
 
     private final LuceneMorphologyComponent luceneMorphologyComponent;
 
-    private final JsoupConfig jsoupConfig;
+    private final JsoupComponent jsoupComponent;
 
     @Async
     public void startAsyncProcessIndexingPage(String url) {
@@ -37,8 +41,13 @@ public class AsyncIndexPageComponentImpl implements AsyncIndexPageComponent {
                 url);
         Site site = sitesComponent.getSiteMatchUrl(url);
         if (site == null) {
-            return;
+            throw new NotFoundSiteException(TEMPLATE_API_INDEXING_PAGE_NOT_RELATED_PAGE);
         }
+
+        if (site.getStatus() == SiteStatusType.INDEXING) {
+            throw new SiteStatusIncorrect(TEMPLATE_API_PAGE_SITE_STATUS_INCORRECT);
+        }
+
         site.setStatusTime(LocalDateTime.now());
         site.setLastError(null);
         site.setStatus(SiteStatusType.INDEXING);
@@ -47,26 +56,45 @@ public class AsyncIndexPageComponentImpl implements AsyncIndexPageComponent {
         String uri = url.substring(site.getUrl().length() - 1);
         clearDataInDB(site, uri);
 
-        Page newPage = JsoupUtility.createPageByLink(url, jsoupConfig);
-        if (newPage == null) {
+        Optional<Connection.Response> optionalResponse = jsoupComponent.getResponse(url);
+
+        if (optionalResponse.isEmpty()) {
             saveFailForSiteToDB(site);
             return;
         }
 
+        Optional<Document> optionalDocument = jsoupComponent.getDocument(url, optionalResponse.get());
+
+        Page newPage = new Page();
+
+        newPage.setCode(optionalResponse.get().statusCode());
+
         newPage.setSite(site);
         newPage.setPath(uri);
+
+        optionalDocument.ifPresent(document -> {
+                newPage.setContent(document.outerHtml());
+//                newPage.setTitle(jsoupComponent.getTitleFromContent(document));
+        });
+
         Page savedPage = pagesComponent.savePageToDB(newPage);
 
-        String text =
-                luceneMorphologyComponent.getTextFromHTML(savedPage.getContent());
+        // TODO VALIDATE
+        String text = optionalDocument.map(jsoupComponent::getTextFromDocument)
+                .orElse("");
 
-        for (LuceneMorphologyComponent.Lang lang : LuceneMorphologyComponent.Lang.values()) {
-            Map<String, Integer> mapOfLemmas =
-                    luceneMorphologyComponent.calculateLemmas(text,
-                            lang);
-            Iterable<Lemma> lemmasIterable = lemmasComponent.prepareAndSaveLemmas(mapOfLemmas, savedPage);
-            indexesComponent.prepareAndSaveIndexes(mapOfLemmas, lemmasIterable, savedPage);
-        }
+//        if (text.isBlank()) {
+//
+//            return;
+//        }
+
+        Map<String, Integer> mapOfLemmas =
+                luceneMorphologyComponent.calculateLemmas(text);
+
+        List<Lemma> lemmaList =
+                lemmasComponent.prepareAndSaveLemmas(mapOfLemmas, savedPage);
+
+        indexesComponent.prepareAndSaveIndexes(mapOfLemmas, lemmaList, savedPage);
 
         site.setStatus(SiteStatusType.INDEXED);
         site.setStatusTime(LocalDateTime.now());
@@ -75,23 +103,30 @@ public class AsyncIndexPageComponentImpl implements AsyncIndexPageComponent {
                 url);
     }
 
+    @Transactional
     private void clearDataInDB(Site site, String uri) {
         Page foundPage = pagesComponent.findFirstPageBySiteIdAndPathInDB(site.getId(), uri);
         if (foundPage != null) {
-            Iterable<Index> indexIterable = indexesComponent.findAllByPageId(foundPage.getId());
-            correctLemmasDueToIndexesDeletion(indexIterable);
+            List<Index> indexes = indexesComponent.findAllByPageId(foundPage.getId());
+            correctLemmasDueToIndexesDeletion(indexes);
             indexesComponent.deleteIndexesByPageIdInDB(foundPage.getId());
             pagesComponent.deletePageBySiteIdAndPathInDB(foundPage.getSite().getId(), uri);
         }
     }
 
-    private void correctLemmasDueToIndexesDeletion(Iterable<Index> indexIterable) {
+    private void correctLemmasDueToIndexesDeletion(List<Index> indexes) {
         List<Lemma> lemmaForUpdate = new ArrayList<>();
-        for (Index index : indexIterable) {
+        for (Index index : indexes) {
             Lemma lemma = index.getLemma();
             lemma.setFrequency(lemma.getFrequency() - 1);
             lemmaForUpdate.add(lemma);
+
+            if (lemma.getFrequency() <= 0) {
+                lemmasComponent.deleteById(lemma.getId());
+                return;
+            }
         }
+
         lemmasComponent.saveLemmasToDB(lemmaForUpdate);
     }
 

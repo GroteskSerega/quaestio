@@ -14,9 +14,8 @@ import searchengine.web.dto.api.IndexingResponse;
 
 import java.util.*;
 
-import static searchengine.service.LoggingTemplates.*;
+import static searchengine.service.ServiceLoggingTemplates.*;
 import static searchengine.web.dto.MessagesTemplates.*;
-
 
 @Slf4j
 @RequiredArgsConstructor
@@ -33,10 +32,13 @@ public class ApisServiceImpl implements ApisService {
         List<Site> existingSites =
                 sitesComponent.getExistingSitesFromDBAndMatchWithConfig();
 
-        for (Site site : existingSites) {
-            if (site.getStatus().equals(SiteStatusType.INDEXING)) {
-                return new IndexingResponse(true, TEMPLATE_API_INDEXING_ALREADY_STARTED);
-            }
+        boolean isAlreadyIndexing = existingSites
+                .stream()
+                .anyMatch(site ->
+                        site.getStatus() == SiteStatusType.INDEXING);
+
+        if (isAlreadyIndexing) {
+            return new IndexingResponse(true, TEMPLATE_API_INDEXING_ALREADY_STARTED);
         }
 
         asyncIndexingSitesComponent.startAsyncProcessIndexingSites(existingSites);
@@ -44,26 +46,23 @@ public class ApisServiceImpl implements ApisService {
         return new IndexingResponse(true, null);
     }
 
+    // TODO Лучше опрашивать статус индексирования у самого TaskManagerEngine
     public IndexingResponse stopIndexing() {
         log.info(TEMPLATE_SERVICE_API_REQUEST_STOP_INDEXING);
 
         List<Site> existingSites =
                 sitesComponent.getExistingSitesFromDBAndMatchWithConfig();
 
-        boolean indexingStarted = false;
+        boolean isAlreadyIndexing = existingSites
+                .stream()
+                .anyMatch(site ->
+                        site.getStatus() == SiteStatusType.INDEXING);
 
-        for (Site site : existingSites) {
-            if (site.getStatus().equals(SiteStatusType.INDEXING)) {
-                indexingStarted = true;
-                break;
-            }
-        }
-
-        if (!indexingStarted) {
+        if (!isAlreadyIndexing) {
             return new IndexingResponse(true, TEMPLATE_API_INDEXING_NOT_STARTED);
         }
 
-        TaskManagerEngine.cancel();
+        TaskManagerEngine.cancelIndexing();
 
         return new IndexingResponse(true, null);
     }
@@ -71,9 +70,7 @@ public class ApisServiceImpl implements ApisService {
     public IndexingResponse indexPage(String url) {
         log.info(TEMPLATE_SERVICE_API_REQUEST_INDEX_PAGE, url);
 
-        boolean urlIsValid = sitesComponent.validateUrlByConfig(url);
-
-        if (!urlIsValid) {
+        if (!sitesComponent.validateUrlByConfig(url)) {
             throw new PageNotRelatedForSiteException(TEMPLATE_API_INDEXING_PAGE_NOT_RELATED_PAGE);
         }
 

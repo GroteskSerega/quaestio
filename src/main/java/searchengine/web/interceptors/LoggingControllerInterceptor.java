@@ -7,8 +7,8 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
-import static searchengine.web.interceptors.LoggingTemplates.TEMPLATE_HTTP_REQUEST_LOGGING;
-import static searchengine.web.interceptors.LoggingTemplates.TEMPLATE_HTTP_RESPONSE_LOGGING;
+import static searchengine.web.interceptors.InterceptorsLoggingTemplates.TEMPLATE_HTTP_REQUEST_LOGGING;
+import static searchengine.web.interceptors.InterceptorsLoggingTemplates.TEMPLATE_HTTP_RESPONSE_LOGGING;
 
 @Slf4j
 public class LoggingControllerInterceptor implements HandlerInterceptor {

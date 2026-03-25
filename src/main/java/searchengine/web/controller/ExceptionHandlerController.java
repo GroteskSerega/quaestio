@@ -9,29 +9,14 @@ import searchengine.web.dto.api.IndexingResponse;
 @RestControllerAdvice
 public class ExceptionHandlerController {
 
-    @ExceptionHandler(IncorrectQuerySearchException.class)
-    public ResponseEntity<IndexingResponse> incorrectQuerySearch(IncorrectQuerySearchException ex) {
-        return ResponseEntity.badRequest()
-                .body(new IndexingResponse(false,
-                        ex.getLocalizedMessage()));
-    }
-
-    @ExceptionHandler(NotFoundIndexedSiteException.class)
-    public ResponseEntity<IndexingResponse> notFoundIndexedSite(NotFoundIndexedSiteException ex) {
-        return ResponseEntity.badRequest()
-                .body(new IndexingResponse(false,
-                        ex.getLocalizedMessage()));
-    }
-
-    @ExceptionHandler(EmptyQuerySearchException.class)
-    public ResponseEntity<IndexingResponse> emptyQuerySearch(EmptyQuerySearchException ex) {
-        return ResponseEntity.badRequest()
-                .body(new IndexingResponse(false,
-                        ex.getLocalizedMessage()));
-    }
-
-    @ExceptionHandler(PageNotRelatedForSiteException.class)
-    public ResponseEntity<IndexingResponse> pageNotRelatedForSite(PageNotRelatedForSiteException ex) {
+    @ExceptionHandler({
+            IncorrectQuerySearchException.class,
+            NotFoundIndexedSiteException.class,
+            EmptyQuerySearchException.class,
+            PageNotRelatedForSiteException.class,
+            NotFoundSiteException.class,
+            SiteStatusIncorrect.class})
+    public ResponseEntity<IndexingResponse> handleBusinessExceptions(IncorrectQuerySearchException ex) {
         return ResponseEntity.badRequest()
                 .body(new IndexingResponse(false,
                         ex.getLocalizedMessage()));

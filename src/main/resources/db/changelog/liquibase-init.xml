@@ -54,6 +54,9 @@
          <column name="path" type="VARCHAR(512)">
             <constraints nullable="false"/>
          </column>
+<!--         <column name="title" type="VARCHAR(512)">-->
+<!--            <constraints nullable="false"/>-->
+<!--         </column>-->
       </createTable>
    </changeSet>
 

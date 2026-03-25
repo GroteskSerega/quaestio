@@ -1,72 +1,59 @@
 package searchengine.component;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import searchengine.entity.Page;
-import searchengine.entity.Site;
-import searchengine.repository.PagesRepository;
+import searchengine.exception.PageAlreadyExists;
+import searchengine.repository.PageRepository;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static searchengine.service.LoggingTemplates.*;
+import static searchengine.component.ComponentLoggingTemplates.*;
 
 @Slf4j
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 @Component
 public class PagesComponentImpl implements PagesComponent {
-    private final PagesRepository pagesRepository;
-
-    private static final Object SYNC_SELECT_OR_INSERT_PAGE_TO_DB = new Object();
+    private final PageRepository pageRepository;
 
     @Override
-    public Iterable<Page> savePagesToDB(List<Page> pages) {
-        pages.forEach(page ->
-                log.info(TEMPLATE_REPOSITORY_PAGES_TRY_TO_SAVE,
-                        page.getSite().getId(),
-                        page.getPath()));
-        Iterable<Page> pageIterable = pagesRepository.saveAll(pages);
-        pageIterable.forEach(iter ->
-                log.info(TEMPLATE_REPOSITORY_PAGES_SAVED,
-                        iter.getId(),
-                        iter.getSite().getId(),
-                        iter.getPath()));
-        return pageIterable;
-    }
-
-    @Override
+    @Transactional
     public Page savePageToDB(Page page) {
         log.info(TEMPLATE_REPOSITORY_PAGES_TRY_TO_SAVE,
-                page.getSite().getId(),
+                page.getSite().getUrl(),
                 page.getPath());
-        Page savedPage = pagesRepository.save(page);
+        Page savedPage = pageRepository.save(page);
         log.info(TEMPLATE_REPOSITORY_PAGES_SAVED,
                 savedPage.getId(),
-                savedPage.getSite().getId(),
+                savedPage.getSite().getUrl(),
                 savedPage.getPath());
         return savedPage;
     }
 
     @Override
-    public void deletePagesInDB(List<Site> sites) {
-        for (Site site : sites) {
-            log.info(TEMPLATE_REPOSITORY_PAGES_TRY_TO_DELETE_BY_SITE_ID,
-                    site.getId());
-            pagesRepository.deleteAllBySiteId(site.getId());
-            log.info(TEMPLATE_REPOSITORY_PAGES_DELETED_BY_SITE_ID,
-                    site.getId());
-        }
+    @Transactional
+    public void deleteBySiteIds(List<Integer> siteIds) {
+        log.info(TEMPLATE_REPOSITORY_PAGES_TRY_TO_DELETE_BY_SITES_IDS,
+                Arrays.toString(siteIds.toArray()));
+        pageRepository.deleteBySiteIds(siteIds);
+        log.info(TEMPLATE_REPOSITORY_PAGES_DELETED_BY_SITES_IDS,
+                Arrays.toString(siteIds.toArray()));
     }
 
     @Override
+    @Transactional
     public void deletePageBySiteIdAndPathInDB(Integer siteId, String path) {
         log.info(TEMPLATE_REPOSITORY_PAGES_TRY_TO_DELETE_BY_SITE_ID_AND_PATH,
                 siteId,
                 path);
-        pagesRepository.deleteFirstBySiteIdAndPath(siteId, path);
+        pageRepository.deleteFirstBySiteIdAndPath(siteId, path);
         log.info(TEMPLATE_REPOSITORY_PAGES_DELETED_BY_SITE_ID_AND_PATH,
                 siteId,
                 path);
@@ -76,7 +63,7 @@ public class PagesComponentImpl implements PagesComponent {
     public Page findFirstPageBySiteIdAndPathInDB(Integer siteId,
                                                  String path) {
         Optional<Page> pageOpt =
-                pagesRepository.findFirstBySiteIdAndPath(siteId,
+                pageRepository.findFirstBySiteIdAndPath(siteId,
                         path);
         Page newPage = pageOpt.orElse(null);
         log.info(TEMPLATE_REPOSITORY_PAGES_FOUND_BY_SITE_ID_AND_URI,
@@ -89,40 +76,52 @@ public class PagesComponentImpl implements PagesComponent {
     @Override
     public Page findFirstPageBySiteIdInDB(Integer siteId) {
         Page foundedPage =
-                pagesRepository.findFirstBySiteId(siteId);
+                pageRepository.findFirstBySiteId(siteId);
         log.info(TEMPLATE_REPOSITORY_PAGES_FIRST_FOUND_BY_SITE_ID,
                 siteId,
                 foundedPage != null ? foundedPage.getId() : null);
         return foundedPage;
     }
 
-    @Transactional
+
+    /**
+     * Hybrid of Optimistic and Pessimistic lock
+     * @param page
+     * @return
+     * @throws PageAlreadyExists
+     */
     @Override
-    public Page selectOrInsertPageToDB(Page page) {
-        // TODO change current logic to PESSIMISTIC_WRITE OR SOMETHING
-        // CURRENT LOGIC:
-        // -:
-        // NOT EFFECTIVE FOR SEVERAL SITES
-        // NOT WORKED FOR SEVERAL INSTANCE OF THESE APP
-        // +:
-        // NOT CREATE DUPLICATE OF PAGES IN DATABASE
-        Page newPage;
-        synchronized (SYNC_SELECT_OR_INSERT_PAGE_TO_DB) {
-            Optional<Page> pageOpt =
-                    pagesRepository.findBySiteIdAndPath(page.getSite().getId(),
-                            page.getPath());
-            newPage = pageOpt.orElseGet(() -> savePageToDB(page));
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Page selectOrInsertPage(Page page) throws PageAlreadyExists {
+        Optional<Page> existingPage = pageRepository.findBySiteIdAndPath(page.getSite().getId(), page.getPath());
+
+        if (existingPage.isPresent()) {
+            throw new PageAlreadyExists("Page already exists");
         }
-        log.info(TEMPLATE_REPOSITORY_PAGES_FOUND_BY_SITE_ID_AND_URI,
-                page.getSite().getId(),
-                page.getPath(),
-                newPage.getId());
-        return newPage;
+
+        try {
+            return pageRepository.saveAndFlush(page);
+        } catch (DataIntegrityViolationException e) {
+            throw new PageAlreadyExists("Page was just inserted by another thread");
+//                       return pageRepository.findBySiteIdAndPath(page.getSite().getId(), page.getPath())
+//                               .orElseThrow(() -> new RuntimeException("Race condition error during page insertion"));
+        }
+//        Page existedPage =
+//                pagesRepository.findBySiteIdAndPathWithLock(page.getSite().getId(),
+//                        page.getPath())
+//                        .orElseGet(() -> pagesRepository.save(page));
+//
+//        log.info(TEMPLATE_REPOSITORY_PAGES_FOUND_BY_SITE_ID_AND_URI,
+//                page.getSite().getId(),
+//                page.getPath(),
+//                existedPage.getId());
+//
+//        return existedPage;
     }
 
     @Override
     public Integer countAllBySiteId(Integer siteId) {
-        Integer countPages = pagesRepository.countAllBySiteId(siteId);
+        Integer countPages = pageRepository.countAllBySiteId(siteId);
         log.info(TEMPLATE_REPOSITORY_PAGES_COUNT_BY_SITE_ID,
                 countPages,
                 siteId);
@@ -131,7 +130,7 @@ public class PagesComponentImpl implements PagesComponent {
 
     @Override
     public Integer countAllBySiteIdIn(List<Integer> sitesId) {
-        Integer countPages = pagesRepository.countAllBySiteIdIn(sitesId);
+        Integer countPages = pageRepository.countAllBySiteIdIn(sitesId);
         log.info(TEMPLATE_REPOSITORY_PAGES_COUNT_BY_SITE_ID,
                 countPages,
                 Arrays.toString(sitesId.toArray()));
@@ -139,32 +138,12 @@ public class PagesComponentImpl implements PagesComponent {
     }
 
     @Override
-    public List<Page> getPagesBySiteId(Integer siteId) {
-        List<Page> foundedPages = pagesRepository.getAllBySiteId(siteId);
-        log.info(TEMPLATE_REPOSITORY_PAGES_FOUND_LIST_IDS_BY_SITE_ID,
-                Arrays.toString(foundedPages
-                        .stream()
-                        .map(Page::getPath)
-                        .toArray()));
-        return foundedPages;
-    }
-
-    @Override
-    public Iterable<Page> getPagesByIds(List<Integer> ids) {
-        Iterable<Page> pageIter = pagesRepository.findAllById(ids);
-        pageIter.forEach(page ->
+    public List<Page> getPagesByIds(List<Integer> ids) {
+        List<Page> pages = pageRepository.findAllById(ids);
+        pages.forEach(page ->
                 log.info(TEMPLATE_REPOSITORY_PAGES_FOUND_BY_IDS,
                         page.getId(),
                         Arrays.toString(ids.toArray())));
-        return pageIter;
-    }
-
-    @Override
-    public List<Integer> findAllIdsBySiteId(Integer siteId) {
-        List<Integer> ids = pagesRepository.findAllIdsBySiteId(siteId);
-        log.info(TEMPLATE_REPOSITORY_PAGES_COUNT_BY_SITE_ID,
-                Arrays.toString(ids.toArray()),
-                siteId);
-        return ids;
+        return pages;
     }
 }

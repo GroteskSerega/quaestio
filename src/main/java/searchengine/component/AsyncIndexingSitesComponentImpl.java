@@ -4,6 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import searchengine.core.engine.TaskManagerEngine;
 import searchengine.entity.Site;
 
@@ -22,22 +25,29 @@ public class AsyncIndexingSitesComponentImpl implements AsyncIndexingSitesCompon
     private final ForkJoinPoolComponent forkJoinPoolComponent;
 
     @Async
+    @Transactional
     public void startAsyncProcessIndexingSites(List<Site> existingSites) {
-        for (Site site : existingSites) {
-            List<Integer> ids = pagesComponent.findAllIdsBySiteId(site.getId());
-            indexesComponent.deleteAllByPageIdIn(ids);
-        }
-        lemmasComponent.deleteLemmasInDB(existingSites);
-        pagesComponent.deletePagesInDB(existingSites);
-        sitesComponent.deleteSitesInDB(existingSites);
+        List<Integer> siteIds = existingSites
+                .stream()
+                .map(Site::getId)
+                .toList();
+
+        indexesComponent.deleteBySiteIds(siteIds);
+        lemmasComponent.deleteBySiteIds(siteIds);
+        pagesComponent.deleteBySiteIds(siteIds);
+        sitesComponent.deleteByIds(siteIds);
 
         List<Site> sitesEntities = sitesComponent.createSitesFromConfigForIndexing();
-        Iterable<Site> savedSites = sitesComponent.saveSitesToDB(sitesEntities);
+        List<Site> savedSites = sitesComponent.saveSitesToDB(sitesEntities);
 
-        TaskManagerEngine.setRunning();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        TaskManagerEngine.setRunningIndexing();
 
-        for (Site site : savedSites) {
-            forkJoinPoolComponent.startIndexSite(site);
-        }
+                        savedSites.forEach(forkJoinPoolComponent::startIndexSite);
+                    }
+                });
     }
 }

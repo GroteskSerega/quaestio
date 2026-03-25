@@ -33,4 +33,7 @@ public class Page {
 
     @Column(columnDefinition = "MEDIUMTEXT", nullable = false)
     private String content;
+
+//    @Column(columnDefinition = "VARCHAR(512)", nullable = false)
+//    private String title;
 }
