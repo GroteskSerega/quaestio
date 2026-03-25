@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
-import static searchengine.service.LoggingTemplates.TEMPLATE_CONFIG_JSOUP_HEADERS_CONFIG;
+import static searchengine.config.ConfigLoggingTemplates.TEMPLATE_CONFIG_JSOUP_HEADERS_CONFIG;
 
 @Slf4j
 @Getter

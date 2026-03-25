@@ -2,10 +2,11 @@ package searchengine.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
 import searchengine.component.*;
+import searchengine.component.core.engine.JsoupComponent;
 import searchengine.config.SearchConfig;
-import searchengine.core.utility.JsoupUtility;
 import searchengine.exception.EmptyQuerySearchException;
 import searchengine.exception.IncorrectQuerySearchException;
 import searchengine.exception.NotFoundIndexedSiteException;
@@ -16,7 +17,7 @@ import searchengine.entity.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static searchengine.service.LoggingTemplates.*;
+import static searchengine.service.ServiceLoggingTemplates.*;
 import static searchengine.web.dto.MessagesTemplates.*;
 
 @Slf4j
@@ -30,6 +31,8 @@ public class SearchServiceImpl implements SearchService {
     private final IndexesComponent indexesComponent;
 
     private final LuceneMorphologyComponent luceneMorphologyComponent;
+
+    private final JsoupComponent jsoupComponent;
 
     private final SearchConfig searchConfig;
 
@@ -111,44 +114,40 @@ public class SearchServiceImpl implements SearchService {
         for (Lemma lemma : rareLemmas) {
             if (pagesIds == null) {
                 pagesIds = indexesComponent.findAllPageIdsBySiteIdInAndLemma(sitesId, lemma.getLemma());
-                Iterable<Page> pageIter = pagesComponent.getPagesByIds(pagesIds);
-                pageIter.forEach(pages::add);
+                pages = pagesComponent.getPagesByIds(pagesIds);
             }
         }
 
         List<DataPage> dataPageList = calculateAndCreateDataPageList(query, pages, rareLemmas);
 
-        ResponseSearchContainer responseContainer = new ResponseSearchContainer(true,
+        return new ResponseSearchContainer(true,
                 dataPageList.size(),
                 dataPageList);
-
-//        log.info(TEMPLATE_SERVICE_RESPONSE,
-//                responseContainer,
-//                HttpStatusCode.valueOf(HTTP_CODE_OK));
-
-        return responseContainer;
     }
 
     private List<String> splitQueryToWords(String query) {
         Map<String, Integer> mapOfLemmas = new HashMap<>();
-        for (LuceneMorphologyComponent.Lang lang : LuceneMorphologyComponent.Lang.values()) {
-            mapOfLemmas.putAll(luceneMorphologyComponent.calculateLemmas(query,
-                    lang));
-        }
+
+        mapOfLemmas.putAll(luceneMorphologyComponent.calculateLemmas(query));
+//        for (LuceneMorphologyComponent.Lang lang : LuceneMorphologyComponent.Lang.values()) {
+//            mapOfLemmas.putAll(luceneMorphologyComponent.calculateLemmas(query,
+//                    lang));
+//        }
+
         return mapOfLemmas.keySet()
                 .stream()
                 .toList();
     }
 
     private List<Lemma> collectRareLemmas(List<Integer> sitesId, List<String> lemmas) {
-        Iterable<Lemma> lemmaIter =
+        List<Lemma> lemmaList =
                 lemmasComponent.findAllBySiteIdInAndLemmaIn(sitesId, lemmas);
 
         Integer countPages = pagesComponent.countAllBySiteIdIn(sitesId);
 
         List<Lemma> rareLemmas = new ArrayList<>();
 
-        for (Lemma lemma : lemmaIter) {
+        for (Lemma lemma : lemmaList) {
             List<Integer> lemmaIds =
                     lemmasComponent.findAllIdBySiteIdInAndLemma(sitesId, lemma.getLemma());
 
@@ -194,11 +193,14 @@ public class SearchServiceImpl implements SearchService {
             StringBuilder builderForLog = new StringBuilder();
             String snippet = "";
 
+            Document documentOfPage = jsoupComponent.getDocumentFromText(page.getContent());
+
             for (Lemma lemma : rareLemmas) {
                 Index index = indexesComponent.findFirstByPageIdAndLemmaId(page.getId(), lemma.getId());
 
                 if (index != null) {
                     absoluteRelevance = Float.sum(absoluteRelevance, index.getRank());
+                    // TODO check calculate. Need find max relevance, then relevance
                     maxRelevance = Float.max(maxRelevance, absoluteRelevance);
 
                     if (!builderForLog.isEmpty()) {
@@ -210,7 +212,7 @@ public class SearchServiceImpl implements SearchService {
                             .append(" - ")
                             .append(index.getRank());
                 }
-                snippet = JsoupUtility.getSnippetFromHTML(page.getContent(), query);
+                snippet = jsoupComponent.getSnippetFromDocument(documentOfPage, query);
             }
 
             log.info(TEMPLATE_SEARCH_CALCULATED_PAGE_RELEVANCE,
@@ -224,7 +226,8 @@ public class SearchServiceImpl implements SearchService {
                             page.getSite().getUrl().length() - 1),
                     page.getSite().getName(),
                     page.getPath(),
-                    JsoupUtility.getTitleFromHTML(page.getContent()),
+//                    page.getTitle(),
+                    jsoupComponent.getTitleFromDocument(documentOfPage),
                     snippet,
                     absoluteRelevance / maxRelevance
             );

@@ -2,22 +2,15 @@ package searchengine.component;
 
 import searchengine.entity.Lemma;
 import searchengine.entity.Page;
-import searchengine.entity.Site;
 
 import java.util.List;
 import java.util.Map;
 
 public interface LemmasComponent {
-    void deleteLemmasBySiteIdDB(Integer siteId);
-    void deleteLemmasInDB(List<Site> sites);
-    void deleteLemmasByIdsInDB(List<Integer> ids);
-    Lemma saveLemmaToDB(Lemma lemma);
-    Iterable<Lemma> saveLemmasToDB(List<Lemma> lemmas);
-    Integer countAllBySiteId(Integer siteId);
-    Integer countAllBySiteIdInAndLemma(List<Integer> sitesId, String lemma);
-    Lemma selectForUpdateOrInsertLemma(Lemma newLemma);
-    Iterable<Lemma> selectForUpdateOrInsertLemmas(List<Lemma> newLemma);
-    Iterable<Lemma> prepareAndSaveLemmas(Map<String, Integer> mapOfLemmas, Page page);
-    Iterable<Lemma> findAllBySiteIdInAndLemmaIn(List<Integer> siteId, List<String> lemmas);
+    void deleteBySiteIds(List<Integer> siteIds);
+    List<Lemma> saveLemmasToDB(List<Lemma> lemmas);
+    List<Lemma> prepareAndSaveLemmas(Map<String, Integer> mapOfLemmas, Page page);
+    List<Lemma> findAllBySiteIdInAndLemmaIn(List<Integer> siteId, List<String> lemmas);
     List<Integer> findAllIdBySiteIdInAndLemma(List<Integer> siteId, String lemma);
+    void deleteById(Integer id);
 }

@@ -2,10 +2,11 @@ package searchengine.component;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import searchengine.config.AppConfig;
-import searchengine.config.JsoupConfig;
+import searchengine.component.core.engine.JsoupComponent;
+import searchengine.core.engine.DtoTaskManager;
 import searchengine.core.engine.TaskManagerEngine;
 import searchengine.entity.Page;
 import searchengine.entity.Site;
@@ -15,7 +16,8 @@ import java.time.LocalDateTime;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 
-import static searchengine.service.LoggingTemplates.*;
+import static searchengine.component.ComponentLoggingTemplates.*;
+import static searchengine.service.ServiceLoggingTemplates.*;
 import static searchengine.web.dto.MessagesTemplates.TEMPLATE_REASON_FAILED_BY_USER;
 import static searchengine.web.dto.MessagesTemplates.TEMPLATE_REASON_FAILED_SITE_CAN_NOT_BE_REACHED;
 
@@ -24,6 +26,8 @@ import static searchengine.web.dto.MessagesTemplates.TEMPLATE_REASON_FAILED_SITE
 @Component
 public class ForkJoinPoolComponentImpl implements ForkJoinPoolComponent {
 
+    private final ForkJoinPool indexingPoolConfig;
+
     private final SitesComponent sitesComponent;
     private final PagesComponent pagesComponent;
     private final LemmasComponent lemmasComponent;
@@ -31,69 +35,73 @@ public class ForkJoinPoolComponentImpl implements ForkJoinPoolComponent {
 
     private final LuceneMorphologyComponent luceneMorphologyComponent;
 
-    private final AppConfig appConfig;
-    private final JsoupConfig jsoupConfig;
+    private final JsoupComponent jsoupComponent;
 
-    private static final int SECONDS_WAIT_FOR_GET_STATISTICS_POOL = 5;
+    @Value("${app.secondsWaitForGetStatisticsPool}")
+    private int secondsWaitForGetStatisticsPool;
 
     @Async
     public void startIndexSite(Site site) {
         TaskManagerEngine taskManager = prepareTasksManager(site);
-        ForkJoinPool forkJoinPool = startProcessIndexing(taskManager);
-        scanningStatusOfIndexing(forkJoinPool, taskManager);
-        // TODO SOMETIMES saveResultsOfIndexing START EARLY SCANNING STATUS OF RESULT
-        // WHEN SOME pool completed work
+
+        startProcessIndexing(taskManager);
+
+        scanningStatusOfIndexing(taskManager);
+
         saveResultsOfIndexing(taskManager);
-        log.info(TEMPLATE_CONFIG_FORK_JOIN_POOL_SHUTDOWN,
-                forkJoinPool);
-//        forkJoinPool.shutdown();
-        log.info(TEMPLATE_ENGINE_FINISHED_PROCESSING_SITE, site);
+
+        log.info(TEMPLATE_FORK_JOIN_POOL_COMPLETED,
+                indexingPoolConfig);
+
+        log.info(TEMPLATE_ENGINE_FINISHED_PROCESSING_SITE, site.getName());
     }
 
     private TaskManagerEngine prepareTasksManager(Site site) {
-        return new TaskManagerEngine(site.getUrl(),
-                site.getUrl(),
-                site,
-                sitesComponent,
-                pagesComponent,
-                lemmasComponent,
-                indexesComponent,
-                luceneMorphologyComponent,
-                jsoupConfig);
+        DtoTaskManager dtoTaskManager =
+                new DtoTaskManager(site.getUrl(),
+                        site.getUrl(),
+                        site,
+                        sitesComponent,
+                        pagesComponent,
+                        lemmasComponent,
+                        indexesComponent,
+                        luceneMorphologyComponent,
+                        jsoupComponent);
+
+        return new TaskManagerEngine(dtoTaskManager);
     }
 
-    private ForkJoinPool startProcessIndexing(TaskManagerEngine taskManager) {
-        ForkJoinPool forkJoinPool = new ForkJoinPool(appConfig.getSearchEngineForkJoinPoolLimit());
-        log.info(TEMPLATE_CONFIG_FORK_JOIN_POOL_CREATE,
-                forkJoinPool);
+    private void startProcessIndexing(TaskManagerEngine taskManager) {
+        log.info(TEMPLATE_FORK_JOIN_POOL_USING,
+                indexingPoolConfig);
         log.info(TEMPLATE_ENGINE_STARTED_PROCESSING_SITE,
-                taskManager.getSite().getUrl());
-        forkJoinPool.execute(taskManager);
-        return forkJoinPool;
+                taskManager.getSite().getName());
+        indexingPoolConfig.execute(taskManager);
     }
 
-    private void scanningStatusOfIndexing(ForkJoinPool forkJoinPool,
-                                          TaskManagerEngine taskManager) {
-        while (!taskManager.isDone()) {
+    private void scanningStatusOfIndexing(TaskManagerEngine taskManager) {
+        while (!taskManager.isDone() && !TaskManagerEngine.isCancelIndexing()) {
             try {
-                TimeUnit.SECONDS.sleep(SECONDS_WAIT_FOR_GET_STATISTICS_POOL);
+                TimeUnit.SECONDS.sleep(secondsWaitForGetStatisticsPool);
+                log.info(TEMPLATE_FORK_JOIN_POOL_GET_STATISTIC,
+                        taskManager.getSite().getName(),
+                        taskManager.isDone(),
+                        taskManager.isCancelled(),
+                        taskManager.isCompletedAbnormally(),
+                        taskManager.isCompletedNormally(),
+                        TaskManagerEngine.isCancelIndexing(),
+                        indexingPoolConfig.getParallelism(),
+                        indexingPoolConfig.getActiveThreadCount(),
+                        indexingPoolConfig.getQueuedTaskCount(),
+                        indexingPoolConfig.getStealCount());
             } catch (InterruptedException e) {
                 log.error(e.getMessage());
-                throw new RuntimeException(e);
-            }
-            log.info(TEMPLATE_COMPONENT_FORK_JOIN_POOL_GET_STATISTIC,
-                    taskManager.getSite().getName(),
-                    taskManager.isDone(),
-                    taskManager.isCancelled(),
-                    taskManager.isCompletedAbnormally(),
-                    taskManager.isCompletedNormally(),
-                    TaskManagerEngine.isCancel(),
-                    forkJoinPool.getParallelism(),
-                    forkJoinPool.getActiveThreadCount(),
-                    forkJoinPool.getQueuedTaskCount(),
-                    forkJoinPool.getStealCount());
-            if (TaskManagerEngine.isCancel()) {
+                Thread.currentThread().interrupt();
                 break;
+            }
+
+            if (TaskManagerEngine.isCancelIndexing() && !taskManager.isDone()) {
+                taskManager.cancel(true);
             }
         }
     }
@@ -102,7 +110,7 @@ public class ForkJoinPoolComponentImpl implements ForkJoinPoolComponent {
         Site site = taskManager.getSite();
         Page anyPage = pagesComponent.findFirstPageBySiteIdInDB(site.getId());
         if (anyPage != null) {
-            if (TaskManagerEngine.isCancel()) {
+            if (TaskManagerEngine.isCancelIndexing()) {
                 site.setStatus(SiteStatusType.FAILED);
                 site.setLastError(TEMPLATE_REASON_FAILED_BY_USER);
             } else {

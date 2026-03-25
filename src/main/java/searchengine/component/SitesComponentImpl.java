@@ -3,28 +3,29 @@ package searchengine.component;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import searchengine.config.SiteConfig;
 import searchengine.config.SitesListConfig;
 import searchengine.entity.Site;
 import searchengine.entity.SiteStatusType;
-import searchengine.repository.SitesRepository;
+import searchengine.repository.SiteRepository;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import static searchengine.service.LoggingTemplates.*;
-import static searchengine.service.LoggingTemplates.TEMPLATE_REPOSITORY_SITES_DELETED;
-import static searchengine.service.LoggingTemplates.TEMPLATE_REPOSITORY_SITES_TRY_TO_DELETE;
+import static searchengine.component.ComponentLoggingTemplates.*;
 
 @Slf4j
 @RequiredArgsConstructor
+@Transactional
 @Component
 public class SitesComponentImpl implements SitesComponent {
 
     private final SitesListConfig sitesListConfig;
-    private final SitesRepository sitesRepository;
+    private final SiteRepository siteRepository;
 
     private static final String TEMPLATE_REGEX_VERTEX_LINK = "%s(.+|)";
 
@@ -51,20 +52,26 @@ public class SitesComponentImpl implements SitesComponent {
     }
 
     @Override
-    public Iterable<Site> saveSitesToDB(List<Site> sites) {
+    @Transactional
+    public List<Site> saveSitesToDB(List<Site> sites) {
         log.info(TEMPLATE_REPOSITORY_SITES_TRY_TO_SAVE,
-                Arrays.toString(sites.toArray()));
-        Iterable<Site> savedSites = sitesRepository.saveAll(sites);
+                sites.stream()
+                        .map(Site::getName)
+                        .collect(Collectors.joining(",")));
+        List<Site> savedSites = siteRepository.saveAll(sites);
         log.info(TEMPLATE_REPOSITORY_SITES_SAVED,
-                Arrays.toString(List.of(savedSites).toArray()));
+                sites.stream()
+                        .map(Site::getName)
+                        .collect(Collectors.joining(",")));
         return savedSites;
     }
 
     @Override
+    @Transactional
     public Site saveSiteToDB(Site site) {
         log.info(TEMPLATE_REPOSITORY_SITES_TRY_TO_SAVE,
                 site);
-        Site savedSite = sitesRepository.save(site);
+        Site savedSite = siteRepository.save(site);
         log.info(TEMPLATE_REPOSITORY_SITES_SAVED,
                 savedSite);
         return savedSite;
@@ -75,25 +82,26 @@ public class SitesComponentImpl implements SitesComponent {
         List<Site> existingSites = new ArrayList<>();
 
         for (SiteConfig siteConfig : sitesListConfig.getSites()) {
-            Site foundedSite = sitesRepository.findByName(siteConfig.getName());
+            Site foundedSite = siteRepository.findByName(siteConfig.getName());
             if (foundedSite != null) {
                 existingSites.add(foundedSite);
             }
         }
         log.info(TEMPLATE_REPOSITORY_SITES_FOUND,
-                Arrays.toString(existingSites.toArray()));
+                existingSites.stream()
+                        .map(Site::getName)
+                        .collect(Collectors.joining(",")));
         return existingSites;
     }
 
     @Override
-    public void deleteSitesInDB(List<Site> sites) {
-        for (Site site : sites) {
-            log.info(TEMPLATE_REPOSITORY_SITES_TRY_TO_DELETE,
-                    site);
-            sitesRepository.deleteById(site.getId());
-            log.info(TEMPLATE_REPOSITORY_SITES_DELETED,
-                    site);
-        }
+    @Transactional
+    public void deleteByIds(List<Integer> ids) {
+        log.info(TEMPLATE_REPOSITORY_SITES_TRY_TO_DELETE,
+                Arrays.toString(ids.toArray()));
+        siteRepository.deleteByIds(ids);
+        log.info(TEMPLATE_REPOSITORY_SITES_DELETED,
+                Arrays.toString(ids.toArray()));
     }
 
     @Override
@@ -121,7 +129,7 @@ public class SitesComponentImpl implements SitesComponent {
             return null;
         }
 
-        Site foundedSite = sitesRepository.findByName(matchConfig.getName());
+        Site foundedSite = siteRepository.findByName(matchConfig.getName());
         log.info(TEMPLATE_REPOSITORY_SITES_FOUND, foundedSite);
 
         if (foundedSite != null) {
@@ -133,23 +141,11 @@ public class SitesComponentImpl implements SitesComponent {
     }
 
     @Override
-    public List<Site> getSitesFromConfig() {
-        List<Site> sites = new ArrayList<>();
-        for (SiteConfig siteConfig :sitesListConfig.getSites()) {
-            Site site = new Site();
-            site.setName(siteConfig.getName());
-            site.setUrl(siteConfig.getUrl());
-            sites.add(site);
-        }
-        return sites;
-    }
-
-    @Override
     public List<Site> getSitesFromDBMatchWithConfigAndOtherSitesFromConfig() {
         List<Site> sites = new ArrayList<>();
 
         for (SiteConfig siteConfig : sitesListConfig.getSites()) {
-            Site foundedSite = sitesRepository.findByName(siteConfig.getName());
+            Site foundedSite = siteRepository.findByName(siteConfig.getName());
             if (foundedSite != null) {
                 sites.add(foundedSite);
                 continue;
@@ -159,8 +155,12 @@ public class SitesComponentImpl implements SitesComponent {
             site.setUrl(siteConfig.getUrl());
             sites.add(site);
         }
+
         log.info(TEMPLATE_REPOSITORY_SITES_FOUND_IN_DB_AND_CONFIG,
-                Arrays.toString(sites.toArray()));
+                sites.stream()
+                        .map(Site::getName)
+                        .collect(Collectors.joining(",")));
+
         return sites;
     }
 }
